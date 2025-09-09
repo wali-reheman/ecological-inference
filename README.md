@@ -30,6 +30,22 @@ pip install git+https://github.com/mggg/ecological-inference.git
  
 If you would like to explore PyEI without installation, you can explore this [interactive Colab notebook](https://colab.research.google.com/drive/1Vr1kKAAHgdcUhPrpFsYc1Kz31nbcpZjP#scrollTo=_ASEm5L3UUAS) (just note that inference might be slow!)
 
+### Quick Start with Notebooks
+
+To run the example notebooks locally with Docker:
+
+```bash
+# Clone the repository
+git clone https://github.com/mggg/ecological-inference.git
+cd ecological-inference
+
+# Build and start Jupyter notebook server
+make build
+make notebook
+```
+
+Then open your browser to `http://localhost:8888` and use the token provided in the terminal.
+
 
 ### Example notebooks
 
@@ -72,6 +88,9 @@ make lint
 
 # Start an interactive development session
 make bash
+
+# Start Jupyter notebook server for interactive development
+make notebook
 
 # Run pre-commit hooks
 make pre-commit
