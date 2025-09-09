@@ -29,8 +29,12 @@ class Datasets:
     """
 
     Santa_Clara = _DataSet(
-        "https://raw.githubusercontent.com/mggg/ecological-inference/main/sample_data/SantaClaraSampleData.csv"
+        # TODO: Use our own data
+        # "https://raw.githubusercontent.com/mggg/ecological-inference/main/sample_data/SantaClaraSampleData.csv"
+        "https://raw.githubusercontent.com/gerrymandr/ei-app/master/santaClara.csv"
     )
     Waterbury = _DataSet(
-        "https://raw.githubusercontent.com/mggg/ecological-inference/main/sample_data/waterbury.csv"
+        # TODO: Use our own data
+        # "https://raw.githubusercontent.com/mggg/ecological-inference/main/sample_data/waterbury.csv"
+        "https://raw.githubusercontent.com/gerrymandr/ei-app/master/waterbury.csv"
     )
