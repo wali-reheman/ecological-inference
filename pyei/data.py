@@ -21,13 +21,16 @@ class _DataSet:
         return pd.read_csv(self.url)
 
 
-class Datasets:  # pylint: disable=too-few-public-methods
+class Datasets:
     """Available datasets related to ecological inference.
 
     These support examples in the library. Please open an issue or pull request if you would
-    like to see other specific examples, or have questions about these."""
+    like to see other specific examples, or have questions about these.
+    """
 
     Santa_Clara = _DataSet(
-        "https://raw.githubusercontent.com/gerrymandr/ei-app/master/santaClara.csv"
+        "https://raw.githubusercontent.com/mggg/ecological-inference/main/sample_data/SantaClaraSampleData.csv"
     )
-    Waterbury = _DataSet("https://raw.githubusercontent.com/gerrymandr/ei-app/master/waterbury.csv")
+    Waterbury = _DataSet(
+        "https://raw.githubusercontent.com/mggg/ecological-inference/main/sample_data/waterbury.csv"
+    )
