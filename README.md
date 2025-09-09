@@ -57,11 +57,34 @@ Feel free to file an issue if you are running into trouble or if there is a feat
 
 Contributions are welcome! 
 
-Uses Python 3.10. After cloning the repository, you should be able to use either `virtualenv` or `conda` to set up your environment. The second (`conda`) is probably easier for development, but `virtualenv` is used for the project's CI.
+Uses Python 3.10. We provide multiple ways to set up your development environment.
 
-Here is how to create and activate each environment. See the docs for more elaborate details:
+### Development with Docker (Recommended)
 
-### Install with virtualenv
+The easiest way to get started is using Docker with our Makefile:
+
+```bash
+# Build the Docker image and run tests
+make test
+
+# Run linting
+make lint
+
+# Start an interactive development session
+make bash
+
+# Run pre-commit hooks
+make pre-commit
+
+# See all available commands
+make help
+```
+
+### Local Development
+
+If you prefer to work without Docker, you can set up your environment locally:
+
+#### Install with virtualenv
 
 ```bash
 virtualenv pyei_venv           # create virtualenv
@@ -71,7 +94,7 @@ python -m pip install -e .     # install project locally
 python -m pip install -r requirements-dev.txt  # install dev requirements
 ```
 
-### Install with conda
+#### Install with conda
 
 ```bash
 conda create --name pyei --channel conda-forge python=3.10 --file requirements.txt --file requirements-dev.txt # create conda environment and install requirements
@@ -79,16 +102,59 @@ conda activate pyei
 pip install -e . #install project locally
 ```
 
-### Testing
+### Testing and Linting
 
-After making changes, make sure everything works by running
+After making changes, make sure everything works by running:
 
+**With Docker (recommended):**
 ```bash
-./scripts/lint_and_test.sh
+make lint
+make test
+```
+
+**Without Docker:**
+```bash
+# Run linting
+ruff check .
+ruff format --check .
+mypy --ignore-missing-imports pyei
+
+# Run tests  
+pytest -vx --cov pyei
 ```
 
 This will also run automatically when you make a pull request, so if you have trouble getting that to run, just open the PR, and we can help!
 
+### Pre-commit Hooks
+
+We use pre-commit hooks to ensure code quality. Install them with:
+
+```bash
+# With Docker
+make pre-commit
+
+# Without Docker (after local setup)
+pre-commit install
+pre-commit run --all-files
+```
+
+### Requirements Management
+
+Dependencies are pinned for reproducible builds:
+
+- `requirements.txt` - Production dependencies with pinned versions
+- `requirements-dev.txt` - Development dependencies with pinned versions  
+- `requirements.lock` - Complete dependency tree with exact versions
+
+To update dependencies:
+
+```bash
+# Check current versions
+make freeze-requirements
+
+# Update the lock file after changing requirements.txt
+make update-requirements
+```
 
 ## Citation
 
