@@ -5,7 +5,7 @@ DOCKER_IMAGE_NAME = pyei
 DOCKER_CONTAINER_NAME = pyei-dev
 
 # Phony targets
-.PHONY: build test lint bash clean install pre-commit help update-requirements freeze-requirements ci-lint ci-test
+.PHONY: build test lint bash clean install pre-commit help update-requirements freeze-requirements ci-lint ci-test notebook
 
 # Default target
 help:
@@ -14,6 +14,7 @@ help:
 	@echo "  test       - Run tests in Docker container"
 	@echo "  lint       - Run linting checks in Docker container"
 	@echo "  bash       - Start interactive bash session in Docker container"
+	@echo "  notebook   - Start Jupyter notebook server in Docker container"
 	@echo "  install    - Install package in development mode locally"
 	@echo "  pre-commit - Run pre-commit hooks in Docker container"
 	@echo "  clean      - Remove Docker containers and images"
@@ -98,3 +99,12 @@ ci-test:
 # Legacy targets for compatibility
 lint-and-test: lint test
 	@echo "Linting and testing completed successfully!"
+
+# Start Jupyter notebook server in Docker
+notebook: build
+	docker run --rm -it \
+		-v $(PWD):/app \
+		-p 8888:8888 \
+		--name $(DOCKER_CONTAINER_NAME)-notebook \
+		$(DOCKER_IMAGE_NAME) \
+		jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root

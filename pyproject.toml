@@ -39,11 +39,11 @@ extend-select = [
 
 ignore = [
   "D415",   # allow first line of doctstrings to end without punctuation
+  "ANN101", # missing type annotation for `self` in method
   "ANN002", # missing type on *args
   "ANN003", # missing type on **kwargs
   "B905",   # won't work on python <3.10
   "D417",   # Missing argument descriptions docstring for `__init__`: `**kwargs`, `*args`
-  "ANN101", # Missing type annotation for `self` in method
 ]
 
 [tool.ruff.lint.pydocstyle]

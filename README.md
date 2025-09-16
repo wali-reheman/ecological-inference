@@ -30,23 +30,39 @@ pip install git+https://github.com/mggg/ecological-inference.git
  
 If you would like to explore PyEI without installation, you can explore this [interactive Colab notebook](https://colab.research.google.com/drive/1Vr1kKAAHgdcUhPrpFsYc1Kz31nbcpZjP#scrollTo=_ASEm5L3UUAS) (just note that inference might be slow!)
 
+### Quick Start with Notebooks
+
+To run the example notebooks locally with Docker:
+
+```bash
+# Clone the repository
+git clone https://github.com/mggg/ecological-inference.git
+cd ecological-inference
+
+# Build and start Jupyter notebook server
+make build
+make notebook
+```
+
+Then open your browser to `http://localhost:8888` and use the token provided in the terminal.
+
 
 ### Example notebooks
 
-Check out the [intro notebooks](https://github.com/mggg/ecological-inference/tree/main/pyei/intro_notebooks) and [example notebooks](https://github.com/mggg/ecological-inference/tree/main/pyei/examples) for sample code
+Check out the [intro notebooks](https://github.com/mggg/ecological-inference/tree/main/intro_notebooks) and [example notebooks](https://github.com/mggg/ecological-inference/tree/main/examples) for sample code
 that shows how to run and adjust the various models in PyEI on datesets.  
 
-If you are new to ecological inference generally, start with [`pyei/intro_notebooks/Introduction_toEI.ipynb`](https://github.com/mggg/ecological-inference/blob/main/pyei/intro_notebooks/Introduction_to_EI.ipynb).
+If you are new to ecological inference generally, start with [`pyei/intro_notebooks/Introduction_to_EI.ipynb`](https://github.com/mggg/ecological-inference/blob/main/intro_notebooks/Introduction_to_EI.ipynb).
 
-If you are familiar with ecological inference and want an overview of PyEI and how to use it (with examples), then start with [`intro_notebooks/PyEI_overview.ipynb`](https://github.com/mggg/ecological-inference/blob/main/pyei/intro_notebooks/PyEI_overview.ipynb).
+If you are familiar with ecological inference and want an overview of PyEI and how to use it (with examples), then start with [`intro_notebooks/PyEI_overview.ipynb`](https://github.com/mggg/ecological-inference/blob/main/intro_notebooks/PyEI_overview.ipynb).
 
-To explore EI's plotting functionality, check out [`pyei/intro_notebooks/Plotting_with_PyEI.ipynb`](https://github.com/mggg/ecological-inference/blob/main/pyei/intro_notebooks/Plotting_with_PyEI.ipynb).
+To explore EI's plotting functionality, check out [`pyei/intro_notebooks/Plotting_with_PyEI.ipynb`](https://github.com/mggg/ecological-inference/blob/main/intro_notebooks/Plotting_with_PyEI.ipynb).
 
-For more work with two-by-two examples, see in [`pyei/examples/santa_clara_demo.ipynb`](https://github.com/mggg/ecological-inference/blob/main/pyei/examples/santa_clara_demo.ipynb).
+For more work with two-by-two examples, see in [`pyei/examples/santa_clara_demo.ipynb`](https://github.com/mggg/ecological-inference/blob/main/examples/santa_clara_demo.ipynb).
 
-For more work with r-by-c examples, see [`pyei/examples/santa_clara_demo_r_by_c.ipynb`](https://github.com/mggg/ecological-inference/blob/main/pyei/examples/santa_clara_demo_r_by_c.ipynb).
+For more work with r-by-c examples, see [`pyei/examples/santa_clara_demo_r_by_c.ipynb`](https://github.com/mggg/ecological-inference/blob/main/examples/santa_clara_demo_r_by_c.ipynb).
 
-For examples of model comparison and checking steps with PyEI, see [`pyei/examples/model_eval_and_comparison_demo.ipynb`](https://github.com/mggg/ecological-inference/blob/main/pyei/examples/model_eval_and_comparison_demo.ipynb).
+For examples of model comparison and checking steps with PyEI, see [`pyei/examples/model_eval_and_comparison_demo.ipynb`](https://github.com/mggg/ecological-inference/blob/main/examples/model_eval_and_comparison_demo.ipynb).
 
 ### Issues
 
@@ -72,6 +88,9 @@ make lint
 
 # Start an interactive development session
 make bash
+
+# Start Jupyter notebook server for interactive development
+make notebook
 
 # Run pre-commit hooks
 make pre-commit
