@@ -1,5 +1,10 @@
-black
-mypy
-pylint
-pytest
-pytest-cov
+# Code quality and linting
+ruff==0.12.12
+mypy==1.17.1
+
+# Testing framework
+pytest==8.4.2
+pytest-cov==6.3.0
+
+# Development tools
+pre-commit==4.3.0

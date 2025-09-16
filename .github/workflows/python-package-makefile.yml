@@ -1,4 +1,5 @@
-name: unittests & auto-publish
+# Alternative workflow using Makefile targets
+name: unittests & auto-publish (Makefile)
 on: [push, pull_request, workflow_dispatch]
 jobs:
   pytest-job:
@@ -29,14 +30,10 @@ jobs:
       run: uv pip freeze --system
     
     - name: Run linters
-      run: |
-        ruff check .
-        ruff format --check .
-        mypy --ignore-missing-imports pyei
+      run: make ci-lint
     
     - name: Test with pytest
-      run: |
-        pytest -vx --cov pyei
+      run: make ci-test
 
 
   # Auto-publish when version is increased

@@ -18,3 +18,9 @@ htmlcov/
 
 # jupyter
 .ipynb_checkpoints/
+
+# pytest
+.pytest_cache/
+
+# ruff
+.ruff_cache/
