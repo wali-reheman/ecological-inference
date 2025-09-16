@@ -24,3 +24,6 @@ htmlcov/
 
 # ruff
 .ruff_cache/
+
+# venv
+.venv/

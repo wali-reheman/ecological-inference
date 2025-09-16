@@ -1,57 +1,77 @@
-# Migration Notes: Scripts → Makefile + Docker
+# Migration Notes: Docker → uv + Virtual Environments
 
 This document explains the modernization changes made to the development workflow.
 
 ## Changes Made
 
-### Replaced Scripts with Makefile
-- **Removed**: `scripts/lint.sh`, `scripts/test.sh`, `scripts/lint_and_test.sh`
-- **Added**: Comprehensive Makefile with Docker and local targets
+### Replaced Docker with uv Virtual Environments
+- **Removed**: `Dockerfile` and Docker-based workflow
+- **Added**: `uv`-based virtual environment workflow
+- **Updated**: Python requirement from 3.10 to 3.11
 
-### Modernized Dependencies
+### Modernized Package Management
+- **Removed**: `setup.py` (replaced with `pyproject.toml`)
+- **Replaced**: `requirements.txt` and `requirements-dev.txt` → dependency groups in `pyproject.toml`
+- **Updated**: Build system from `setuptools` to `hatchling`
+- **Added**: `uv.lock` for exact reproducibility
 - **Replaced**: `pip` → `uv` (faster, more reliable)
 - **Replaced**: `black` + `pylint` → `ruff` (faster, unified)
-- **Added**: Pinned versions in `requirements.txt` and `requirements-dev.txt`
-- **Added**: Complete lock file `requirements.lock`
 
-### Updated CI/CD
-- **Updated**: `.github/workflows/python-package.yml` to use `uv` and direct commands
-- **Added**: Alternative Makefile-based workflow option
+### Consolidated CI/CD Workflow
+- **Consolidated**: Multiple workflow files → single `ci.yml`
+- **Updated**: Uses Makefile targets for consistency
+- **New structure**:
+  - Linting runs on all commits (push and PR)
+  - Testing runs only on PRs (non-draft only)
+  - Publishing runs only on pushes to main
 
 ## Command Equivalents
 
 | Old Command | New Command |
 |-------------|-------------|
-| `./scripts/lint.sh` | `make lint` (Docker) or `make ci-lint` (local) |
-| `./scripts/test.sh` | `make test` (Docker) or `make ci-test` (local) |
-| `./scripts/lint_and_test.sh` | `make lint test` or `make lint-and-test` |
+| `make build` | `make setup` |
+| `make test` (Docker) | `make test` (uv) |
+| `make lint` (Docker) | `make lint` (uv) |
+| `make bash` (Docker) | `source .venv/bin/activate` |
+| `pip install -e .` | `uv pip install -e .` |
+| `pip install -r requirements-dev.txt` | `uv pip install -e ".[dev]"` |
 
 ## For Contributors
 
-### Docker Development (Recommended)
+### Development Setup
 ```bash
-make help          # See all available commands
-make test          # Run tests
-make lint          # Run linting
-make bash          # Interactive development session
+make setup          # Create venv and install dev dependencies
+source .venv/bin/activate  # Activate virtual environment
+make test           # Run tests
+make lint           # Run linting
+make format         # Format code
 ```
 
-### Local Development
+### Direct uv Commands
 ```bash
-make install       # Set up local environment
-make ci-lint       # Run linting locally
-make ci-test       # Run tests locally
+uv run pytest       # Run tests
+uv run ruff check   # Lint code
+uv run ruff format  # Format code
+uv run mypy pyei    # Type checking
 ```
 
-### Requirements Management
+### Dependency Management
 ```bash
-make freeze-requirements    # Show current versions
-make update-requirements   # Update lock file
+uv pip list         # Show installed packages
+uv lock --upgrade   # Update lock file
 ```
+
+## Publishing
+
+To publish a new version:
+1. Update the version in `pyproject.toml`
+2. Commit and push to main
+3. The CI/CD workflow automatically publishes to PyPI
+
 
 ## Backward Compatibility
 
-- The publishing workflow remains unchanged
 - All functionality is preserved, just modernized
-- New setup is faster and more reliable
-- Docker ensures consistent environments across machines
+- Virtual environments ensure consistent environments across machines
+- No Docker dependency required
+- Same development experience, better performance

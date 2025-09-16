@@ -1,19 +1,99 @@
 [build-system]
-requires = ["setuptools >= 64.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
-requires-python = ">=3.10"
 name = "pyei"
-dynamic = ["version", "description", "readme", "authors", "dependencies"]
+version = "1.1.4"
+description = "A package for rpv and ecological inference"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "Metric Geometry and Gerrymandering Group"}
+]
+license = {file = "LICENSE"}
+keywords = ["ecological inference", "statistics", "bayesian"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics"
+]
 
-[tool.setuptools.packages.find]
-include = ["pyei*"]
+dependencies = [
+    # Core scientific computing
+    "numpy==2.2.6",
+    "scipy==1.15.3",
+    "pandas==2.3.2",
+    "matplotlib==3.10.6",
+    "seaborn==0.13.2",
+    
+    # Machine learning
+    "scikit-learn==1.7.2",
+    
+    # Bayesian inference and probabilistic programming
+    "pymc==5.25.1",
+    "arviz==0.22.0",
+    "pytensor==2.31.7",
+    
+    # JAX ecosystem for high-performance computing
+    "jax==0.6.2",
+    "jaxlib==0.6.2",
+    "numpyro==0.19.0",
+    
+    # Numerical computation acceleration
+    "numba==0.61.2",
+    
+    # Data I/O and visualization
+    "netCDF4==1.7.2",
+    "h5netcdf==1.6.4",
+    "h5py==3.14.0",
+    "xarray==2025.6.1",
+    "xarray-einstats==0.8.0",
+    "graphviz==0.21",
+    
+    # Utilities
+    "tqdm==4.67.1",
+]
 
-[tool.setuptools.dynamic]
-version = {attr = "pyei.__version__"}
-readme = {file = ["README.md"]}
-dependencies = {file = ["requirements.txt"]}
+[project.urls]
+Homepage = "https://github.com/mggg/ecological-inference"
+Repository = "https://github.com/mggg/ecological-inference"
+Issues = "https://github.com/mggg/ecological-inference/issues"
+
+[project.optional-dependencies]
+dev = [
+    # Code quality and linting
+    "ruff==0.12.12",
+    "mypy==1.17.1",
+    
+    # Testing framework
+    "pytest==8.4.2",
+    "pytest-cov==6.3.0",
+    
+    # Development tools
+    "pre-commit==4.3.0",
+    
+    # Jupyter notebook support
+    "jupyter==1.1.1",
+    "ipykernel",
+    "ipywidgets==8.1.5",
+]
+
+docs = [
+    # Documentation tools
+    "sphinx",
+    "sphinx-rtd-theme",
+    "myst-parser",
+    "nbsphinx",
+    "sphinx-autodoc-typehints",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pyei"]
 
 [tool.ruff.lint]
 extend-select = [
@@ -51,5 +131,5 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "test/*.py" = [
-  "S101", # Use of assert
+  "S101",   # Use of assert
 ]

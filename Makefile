@@ -1,110 +1,138 @@
-# Makefile for PyEI package
+# Makefile for PyEI package - uv-based workflow
 
-# Docker settings
-DOCKER_IMAGE_NAME = pyei
-DOCKER_CONTAINER_NAME = pyei-dev
+# Python version
+PYTHON_VERSION = 3.11
+
+# Virtual environment directory
+VENV_DIR = .venv
 
 # Phony targets
-.PHONY: build test lint bash clean install pre-commit help update-requirements freeze-requirements ci-lint ci-test notebook
+.PHONY: help setup install install-dev install-docs test lint format type-check clean pre-commit notebook
 
 # Default target
 help:
 	@echo "Available targets:"
-	@echo "  build      - Build the Docker image"
-	@echo "  test       - Run tests in Docker container"
-	@echo "  lint       - Run linting checks in Docker container"
-	@echo "  bash       - Start interactive bash session in Docker container"
-	@echo "  notebook   - Start Jupyter notebook server in Docker container"
-	@echo "  install    - Install package in development mode locally"
-	@echo "  pre-commit - Run pre-commit hooks in Docker container"
-	@echo "  clean      - Remove Docker containers and images"
-	@echo "  help       - Show this help message"
-	@echo "  update-requirements - Update requirements.lock with current versions"
-	@echo "  freeze-requirements - Show current package versions"
-	@echo "  ci-lint    - Run linting for CI (without Docker)"
-	@echo "  ci-test    - Run tests for CI (without Docker)"
+	@echo "  setup           - Create virtual environment and install dev dependencies"
+	@echo "  install         - Install package in production mode"
+	@echo "  install-dev     - Install package with dev dependencies"
+	@echo "  install-docs    - Install package with docs dependencies"
+	@echo "  test            - Run tests"
+	@echo "  lint            - Run linting checks"
+	@echo "  format          - Format code"
+	@echo "  type-check      - Run type checking"
+	@echo "  pre-commit      - Run pre-commit hooks"
+	@echo "  notebook        - Start Jupyter notebook server"
+	@echo "  clean           - Remove virtual environment and cache files"
 
-# Build Docker image
-build:
-	docker build -t $(DOCKER_IMAGE_NAME) .
+# Setup development environment
+setup:
+	@echo "Setting up PyEI development environment..."
+	@echo ""
+	@echo "Checking prerequisites..."
+	@if ! command -v uv >/dev/null 2>&1; then \
+		echo "ERROR: uv is not installed. Please install it first:"; \
+		echo "   curl -LsSf https://astral.sh/uv/install.sh | sh"; \
+		exit 1; \
+	fi
+	@echo "✓ uv is installed"
+	@python_version=$$(python3 --version 2>&1 | cut -d' ' -f2 | cut -d'.' -f1,2); \
+	if [ "$$(echo "$$python_version < 3.11" | bc -l 2>/dev/null || echo "1")" = "1" ] && [ "$$python_version" != "3.11" ]; then \
+		echo "WARNING: Python $$python_version detected. This project requires Python 3.11+"; \
+		echo "   Please upgrade to Python 3.11 or later"; \
+		echo "   You can use uv to install Python 3.11: uv python install 3.11"; \
+	fi
+	@echo "✓ Python version check complete"
+	@echo ""
+	@echo "Creating virtual environment and installing dev dependencies..."
+	uv sync --dev --python $(PYTHON_VERSION)
+	@echo "Installing package in editable mode..."
+	uv pip install -e ".[dev]"
+	@echo ""
+	@echo "Setting up pre-commit hooks..."
+	uv run pre-commit install
+	@echo ""
+	@echo "Development environment setup complete!"
+	@echo ""
+	@echo "Next steps:"
+	@echo "   1. Activate the virtual environment:"
+	@echo "      source $(VENV_DIR)/bin/activate"
+	@echo ""
+	@echo "   2. See all available commands:"
+	@echo "      make help"
 
-# Run tests in Docker
-test: build
-	docker run --rm \
-		-v $(PWD):/app \
-		$(DOCKER_IMAGE_NAME) \
-		pytest -vx --cov pyei
-
-# Run linting in Docker
-lint: build
-	docker run --rm \
-		-v $(PWD):/app \
-		$(DOCKER_IMAGE_NAME) \
-		sh -c "ruff check . && ruff format --check . && mypy --ignore-missing-imports pyei"
-
-# Start interactive bash session in Docker
-bash: build
-	docker run --rm -it \
-		-v $(PWD):/app \
-		--name $(DOCKER_CONTAINER_NAME) \
-		$(DOCKER_IMAGE_NAME) \
-		/bin/bash
-
-# Install package locally (for development without Docker)
+# Install package in production mode
 install:
-	pip install -e .
-	pip install -r requirements-dev.txt
+	@echo "Installing PyEI in production mode..."
+	uv sync --python $(PYTHON_VERSION)
+	uv pip install -e .
 
-# Run pre-commit hooks in Docker
-pre-commit: build
-	docker run --rm \
-		-v $(PWD):/app \
-		$(DOCKER_IMAGE_NAME) \
-		sh -c "pre-commit install && pre-commit run --all-files"
+# Install package with dev dependencies
+install-dev:
+	@echo "Installing PyEI with dev dependencies..."
+	uv sync --dev --python $(PYTHON_VERSION)
+	uv pip install -e ".[dev]"
 
-# Clean up Docker resources
+# Install package with docs dependencies
+install-docs:
+	@echo "Installing PyEI with docs dependencies..."
+	uv sync --extra docs --python $(PYTHON_VERSION)
+	uv pip install -e ".[docs]"
+
+# Run tests
+test:
+	@echo "Running tests..."
+	uv run pytest -vx
+
+# Run linting checks
+lint:
+	@echo "Running linting checks..."
+	uv run ruff check .
+	uv run ruff format --check .
+
+# Format code
+format:
+	@echo "Formatting code..."
+	uv run ruff format .
+
+# Run type checking
+type-check:
+	@echo "Running type checking..."
+	uv run mypy --ignore-missing-imports pyei
+
+# Run all checks (lint + type-check + test)
+check: lint type-check test
+	@echo "All checks passed!"
+
+# Run pre-commit hooks
+pre-commit:
+	@echo "Running pre-commit hooks..."
+	uv run pre-commit install
+	uv run pre-commit run --all-files
+
+# Start Jupyter notebook server
+notebook:
+	@echo "Starting Jupyter notebook server..."
+	@echo "Open http://localhost:8888 in your browser"
+	uv run jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser
+
+# Clean up
 clean:
-	-docker stop $(DOCKER_CONTAINER_NAME) 2>/dev/null || true
-	-docker rm $(DOCKER_CONTAINER_NAME) 2>/dev/null || true
-	-docker rmi $(DOCKER_IMAGE_NAME) 2>/dev/null || true
+	@echo "Cleaning up..."
+	rm -rf $(VENV_DIR)
+	rm -rf .pytest_cache
+	rm -rf .mypy_cache
+	rm -rf .ruff_cache
+	rm -rf .ipynb_checkpoints
+	rm -rf .coverage*
 
-# Requirements management
-update-requirements: build
-	@echo "Updating requirements.lock with current package versions..."
-	docker run --rm -v $(PWD):/app $(DOCKER_IMAGE_NAME) \
-		sh -c "/root/.local/bin/uv pip freeze > requirements.lock && \
-		echo '# This file contains the exact versions of all dependencies (including transitive ones)' > temp && \
-		echo '# Generated by: make update-requirements' >> temp && \
-		echo '# Date: $(shell date +%Y-%m-%d)' >> temp && \
-		echo '# Python version: 3.10' >> temp && \
-		echo '' >> temp && \
-		cat requirements.lock >> temp && \
-		mv temp requirements.lock"
-	@echo "Requirements lock file updated!"
-
-freeze-requirements: build
-	@echo "Current package versions:"
-	docker run --rm -v $(PWD):/app $(DOCKER_IMAGE_NAME) \
-		/root/.local/bin/uv pip freeze
-
-# CI targets (without Docker for GitHub Actions)
-ci-lint:
-	ruff check .
-	ruff format
-	mypy --ignore-missing-imports pyei
+# CI targets (for GitHub Actions)
+ci-install:
+	uv sync --dev --python $(PYTHON_VERSION)
+	uv pip install -e ".[dev]"
 
 ci-test:
-	pytest -vx --cov pyei
+	uv run pytest -vx
 
-# Legacy targets for compatibility
-lint-and-test: lint test
-	@echo "Linting and testing completed successfully!"
-
-# Start Jupyter notebook server in Docker
-notebook: build
-	docker run --rm -it \
-		-v $(PWD):/app \
-		-p 8888:8888 \
-		--name $(DOCKER_CONTAINER_NAME)-notebook \
-		$(DOCKER_IMAGE_NAME) \
-		jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+ci-lint:
+	uv run ruff check .
+	uv run ruff format --check .
