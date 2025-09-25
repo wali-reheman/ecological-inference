@@ -1,28 +1,21 @@
-"""
-Goodman's ecological regression
-"""
+"""Goodman's ecological regression"""
 
-from matplotlib import pyplot as plt
 import numpy as np
 import pymc as pm
-from sklearn.linear_model import LinearRegression
 import seaborn as sns
 import seaborn.algorithms as sns_algo
 import seaborn.utils as sns_utils
+from matplotlib import pyplot as plt
+from sklearn.linear_model import LinearRegression
 
-from .two_by_two import TwoByTwoEIBaseBayes
-
-__all__ = ["GoodmansER", "GoodmansERBayes"]
+from pyei.two_by_two import TwoByTwoEIBaseBayes
 
 
 class GoodmansER:
-    """
-    Fitting and plotting for Goodman's ER (with options for pop weighting)
-    """
+    """Fitting and plotting for Goodman's ER (with options for pop weighting)"""
 
     def __init__(self, is_weighted_regression=False):
-        """
-        Parameters
+        """Parameters
         ----------
         is_weighted_regression: bool, optional
             Default is False. If true, weight precincts by population when
@@ -135,16 +128,21 @@ class GoodmansER:
             scatter_kws.setdefault("linewidths", 0)
             scatter_kws.setdefault("alpha", 0.8)
             sns.lineplot(
-                x=[0, 1], y=[self.intercept_, self.intercept_ + self.slope_], ax=ax, **line_kws
+                x=[0, 1],
+                y=[self.intercept_, self.intercept_ + self.slope_],
+                ax=ax,
+                **line_kws,
             )
             sns.scatterplot(
-                x=self.demographic_group_fraction, y=self.vote_fraction, ax=ax, **scatter_kws
+                x=self.demographic_group_fraction,
+                y=self.vote_fraction,
+                ax=ax,
+                **scatter_kws,
             )
             xgrid = np.linspace(0, 1, 101)
 
             def fit_fast(xgrid, x, y, w):
-                """
-                Modifying this function from sns to accomodate weighted regression
+                """Modifying this function from sns to accomodate weighted regression
                 in CI computation
                 """
 
@@ -159,7 +157,13 @@ class GoodmansER:
                 grid = np.c_[np.ones(len(xgrid)), xgrid]  # append ones for intercept
                 yhat = grid.dot(weighted_reg_func(x_with_ones, y, w))
                 beta_boots = sns_algo.bootstrap(
-                    x_with_ones, y, w, func=weighted_reg_func, n_boot=1000, units=None, seed=None
+                    x_with_ones,
+                    y,
+                    w,
+                    func=weighted_reg_func,
+                    n_boot=1000,
+                    units=None,
+                    seed=None,
                 ).T
                 yhat_boots = grid.dot(beta_boots).T
                 return yhat, yhat_boots
@@ -198,8 +202,7 @@ class GoodmansERBayes(TwoByTwoEIBaseBayes):
         weighted_by_pop=False,
         **additional_model_params,
     ):
-        """
-        Optional arguments:
+        """Optional arguments:
         model_name: str
             Default is "goodman_er_bayes"
         weighted_by_pop: bool
@@ -257,10 +260,10 @@ class GoodmansERBayes(TwoByTwoEIBaseBayes):
         self.votes_fraction = votes_fraction
 
         if self.weighted_by_pop:
-            model_function = goodmans_er_bayes_pop_weighted_model
+            model_function = _goodmans_er_bayes_pop_weighted_model
             self.additional_model_params["precinct_pops"] = precinct_pops
         else:
-            model_function = goodmans_er_bayes_model
+            model_function = _goodmans_er_bayes_model
         self.sim_model = model_function(
             group_fraction, votes_fraction, **self.additional_model_params
         )
@@ -277,11 +280,15 @@ class GoodmansERBayes(TwoByTwoEIBaseBayes):
         """Sets sampled_voting_prefs"""
         # obtain samples of the districtwide proportion of each demog. group voting for candidate
         self.sampled_voting_prefs[0] = (
-            self.sim_trace["posterior"]["b_1"].stack(all_draws=["chain", "draw"]).values.T
+            self.sim_trace["posterior"]["b_1"]
+            .stack(all_draws=["chain", "draw"])
+            .values.T
         )
         # sampled voted prefs across precincts
         self.sampled_voting_prefs[1] = (
-            self.sim_trace["posterior"]["b_2"].stack(all_draws=["chain", "draw"]).values.T
+            self.sim_trace["posterior"]["b_2"]
+            .stack(all_draws=["chain", "draw"])
+            .values.T
         )
         # sampled voted prefs across precincts
 
@@ -353,14 +360,16 @@ class GoodmansERBayes(TwoByTwoEIBaseBayes):
             **scatter_kws,
         )
         ax.plot(x_vals, means, **line_kws)
-        ax.fill_between(x_vals, lower_bounds, upper_bounds, alpha=0.2, color=line_kws["color"])
+        ax.fill_between(
+            x_vals, lower_bounds, upper_bounds, alpha=0.2, color=line_kws["color"]
+        )
         ax.grid()
         ax.set_xlim((0, 1))
         ax.set_ylim((0, 1))
         return ax
 
 
-def goodmans_er_bayes_model(group_fraction, votes_fraction, sigma=1):
+def _goodmans_er_bayes_model(group_fraction, votes_fraction, sigma=1):
     """Ecological regression with uniform priors over voting prefs b_1, b_2,
     constraining them to be between zero and 1
 
@@ -372,11 +381,10 @@ def goodmans_er_bayes_model(group_fraction, votes_fraction, sigma=1):
     votes_fraction  :   Length p vector giving the fraction of each precinct_pop
                             that votes for the candidate of interest (T)
 
-    Returns
+    Returns:
     -------
     bayes_er_model: a pymc3 model
     """
-
     with pm.Model() as bayes_er_model:
         b_1 = pm.Uniform("b_1")
         b_2 = pm.Uniform("b_2")
@@ -393,7 +401,9 @@ def goodmans_er_bayes_model(group_fraction, votes_fraction, sigma=1):
     return bayes_er_model
 
 
-def goodmans_er_bayes_pop_weighted_model(group_fraction, votes_fraction, precinct_pops, sigma=1):
+def _goodmans_er_bayes_pop_weighted_model(
+    group_fraction, votes_fraction, precinct_pops, sigma=1
+):
     """Ecological regression with variance of modeled vote fraction inversely proportional to
     precinct population.
 
@@ -409,11 +419,10 @@ def goodmans_er_bayes_pop_weighted_model(group_fraction, votes_fraction, precinc
     precinct_pops   :   Length-p vector giving size of each precinct population
                             of interest (e.g. voting population) (N)
 
-    Returns
+    Returns:
     -------
     bayes_er_model: a pymc3 model
     """
-
     mean_precinct_pop = precinct_pops.mean()
     with pm.Model() as bayes_er_model:
         b_1 = pm.Uniform("b_1")

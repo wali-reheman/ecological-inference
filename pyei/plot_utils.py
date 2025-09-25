@@ -1,30 +1,16 @@
-"""
-Plotting functions for visualizing ei outputs
-
-"""
+"""Plotting functions for visualizing ei outputs"""
 
 import warnings
-import seaborn as sns
+
+import matplotlib.patches as mpatches
+import numpy as np
 import pandas as pd
+import scipy.stats as st
+import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib import ticker as mticker
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
-import matplotlib.patches as mpatches
-import numpy as np
-import scipy.stats as st
-
-__all__ = [
-    "plot_boxplots",
-    "plot_conf_or_credible_interval",
-    "plot_intervals_all_precincts",
-    "plot_kdes",
-    "plot_polarization_kde",
-    "plot_precinct_scatterplot",
-    "plot_precincts",
-    "plot_summary",
-    "tomography_plot",
-]
 
 PALETTE = "Dark2"  # set library-wide color palette
 FONTSIZE = 20
@@ -34,9 +20,8 @@ FIGSIZE = (10, 5)
 colors = sns.color_palette(PALETTE)
 
 
-def size_ticks(ax, axis="x"):
-    """
-    Helper function to size the x- or ytick (numbers) of a matplotlib Axis
+def _size_ticks(ax, axis="x"):
+    """Helper function to size the x- or ytick (numbers) of a matplotlib Axis
 
     Parameters
     ----------
@@ -58,9 +43,8 @@ def size_ticks(ax, axis="x"):
         raise ValueError("You need to specify an 'x' or 'y' axis!")
 
 
-def size_yticklabels(ax):
-    """
-    Helper function to size the ytick labels of a matplotlib Axis
+def _size_yticklabels(ax):
+    """Helper function to size the ytick labels of a matplotlib Axis
 
     Parameters
     ----------
@@ -69,7 +53,7 @@ def size_yticklabels(ax):
     ax.set_yticklabels(ax.get_yticklabels(), size=TICKSIZE)
 
 
-def plot_single_ridgeplot(
+def _plot_single_ridgeplot(
     ax,
     group_prefs,
     colors,  # pylint: disable=redefined-outer-name
@@ -129,7 +113,7 @@ def plot_single_ridgeplot(
         )
 
 
-def plot_single_histogram(
+def _plot_single_histogram(
     ax,
     group_prefs,
     colors,  # pylint: disable=redefined-outer-name
@@ -154,7 +138,6 @@ def plot_single_histogram(
     trans
         The y-translation for this plot
     """
-
     bins = np.linspace(0, 1.0, num=20)
     for i, group_pref in enumerate(group_prefs):
         weights, bins = np.histogram(group_pref, bins=bins)
@@ -207,7 +190,7 @@ def plot_precincts(
     ax : Matplotlib axis object or None, optional
         Default=None
 
-    Returns
+    Returns:
     -------
     ax: Matplotlib axis object
     """
@@ -237,9 +220,9 @@ def plot_precincts(
         ax.plot([0], [idx])
         trans = ax.convert_yunits(idx)
         if plot_as_histograms:
-            plot_single_histogram(ax, group_prefs, colors, alpha, 4 * (N - idx), trans)
+            _plot_single_histogram(ax, group_prefs, colors, alpha, 4 * (N - idx), trans)
         else:
-            plot_single_ridgeplot(ax, group_prefs, colors, alpha, 4 * (N - idx), trans)
+            _plot_single_ridgeplot(ax, group_prefs, colors, alpha, 4 * (N - idx), trans)
     for i in range(legend_space):
         # add `legend_space` number of lines to the top of the plot for legend
         ax.plot([0], [N + i])
@@ -254,7 +237,9 @@ def plot_precincts(
 
     # replace y-axis ticks with precinct labels
     ax.set_yticks(np.arange(len(precinct_labels)))
-    ax.yaxis.set_major_formatter(mticker.FuncFormatter(replace_ticks_with_precinct_labels))
+    ax.yaxis.set_major_formatter(
+        mticker.FuncFormatter(replace_ticks_with_precinct_labels)
+    )
     ax.set_title("Precinct level estimates of voting preferences", fontsize=TITLESIZE)
     ax.set_xlabel(f"Percent vote for {candidate}", fontsize=FONTSIZE)
     ax.set_ylabel("Precinct", fontsize=FONTSIZE)
@@ -265,15 +250,14 @@ def plot_precincts(
     ]
     ax.legend(handles=proxy_handles, prop={"size": 14}, loc="upper center")
     ax.set_ylim(-1, ax.get_ylim()[1])
-    size_ticks(ax, "x")
+    _size_ticks(ax, "x")
     return ax
 
 
 def plot_boxplots(
     sampled_voting_prefs, group_names, candidate_names, plot_by="candidate", axes=None
 ):
-    """
-    Horizontal boxplots for r x c sets of samples between 0 and 1
+    """Horizontal boxplots for r x c sets of samples between 0 and 1
 
     Parameters
     ----------
@@ -301,17 +285,16 @@ def plot_boxplots(
         If not None and plot_by is 'candidate', should have length c (number of candidates).
         If plot_by is 'group', should have length r (number of groups)
 
-    Returns
+    Returns:
     -------
     ax : Matplotlib axis object
         Has c subplots, each showing the sampled voting preference of each of r groups.
 
-    Notes
+    Notes:
     -----
     If passing existing axes within a subplot, consider using, e.g.,
     plt.subplots_adjust(hspace=0.75) to make control spacing
     """
-
     _, num_groups, num_candidates = sampled_voting_prefs.shape
     if plot_by == "candidate":
         num_plots = num_candidates
@@ -332,22 +315,29 @@ def plot_boxplots(
         if axes is None:
             _, axes = plt.subplots(num_groups, figsize=FIGSIZE)
     else:
-        raise ValueError("plot_by must be 'group' or 'candidate' (default: 'candidate')")
+        raise ValueError(
+            "plot_by must be 'group' or 'candidate' (default: 'candidate')"
+        )
     plt.gcf().subplots_adjust(hspace=1)
 
     for plot_idx in range(num_plots):
         samples_df = pd.DataFrame(
-            {legend[i]: sampled_voting_prefs[:, i, plot_idx] for i in range(num_boxes_per_plot)}
+            {
+                legend[i]: sampled_voting_prefs[:, i, plot_idx]
+                for i in range(num_boxes_per_plot)
+            }
         )
         if num_plots > 1:
             ax = axes[plot_idx]
         else:
             ax = axes
-        sns.boxplot(data=samples_df, orient="h", whis=[2.5, 97.5], ax=ax, palette=colors)
+        sns.boxplot(
+            data=samples_df, orient="h", whis=[2.5, 97.5], ax=ax, palette=colors
+        )
         ax.set_title(f"Support {support} {titles[plot_idx]}", fontsize=TITLESIZE)
         ax.tick_params(axis="y", left=False)  # remove y axis ticks
-        size_ticks(ax, "x")
-        size_yticklabels(ax)
+        _size_ticks(ax, "x")
+        _size_yticklabels(ax)
 
     return ax
 
@@ -376,7 +366,7 @@ def plot_summary(
         Default=None
         Length 2: (ax_box, ax_hist)
 
-    Returns
+    Returns:
     -------
     ax_box : Matplotlib axis object
     ax_hist : Matplotlib axis object
@@ -390,7 +380,7 @@ def plot_summary(
         )
     else:
         ax_hist, ax_box = axes
-    size_ticks(ax_box, "x")
+    _size_ticks(ax_box, "x")
     ax_box.set_title("")
     ax_box.set_xlabel(f"Support for {candidate_name}", fontsize=FONTSIZE)
     sns.despine(ax=ax_hist)
@@ -418,15 +408,18 @@ def plot_summary(
     ax_box.tick_params(axis="y", left=False)  # remove y axis ticks
 
     # plot distribution
-    plot_kdes(sampled_voting_prefs, [group1_name, group2_name], [candidate_name], axes=ax_hist)
+    plot_kdes(
+        sampled_voting_prefs, [group1_name, group2_name], [candidate_name], axes=ax_hist
+    )
     ax_hist.set_title("EI Summary", fontsize=TITLESIZE)
     plt.subplots_adjust(hspace=0.005)
     return (ax_box, ax_hist)
 
 
-def plot_precinct_scatterplot(ei_runs, run_names, candidate, demographic_group="all", ax=None):
-    """
-    Given two RxC EI runs, plot precinct-by-precinct comparison of preferences
+def plot_precinct_scatterplot(
+    ei_runs, run_names, candidate, demographic_group="all", ax=None
+):
+    """Given two RxC EI runs, plot precinct-by-precinct comparison of preferences
     for a given candidate from a given demographic group.
 
     Parameters
@@ -444,7 +437,7 @@ def plot_precinct_scatterplot(ei_runs, run_names, candidate, demographic_group="
         Must be a demographic group common to both EI runs, or "all",
         which plots and labels each demographic group onto the same axes.
 
-    Returns
+    Returns:
     -------
     ax: Matplotlib axis object
     """
@@ -476,7 +469,9 @@ def plot_precinct_scatterplot(ei_runs, run_names, candidate, demographic_group="
         demographic_group_names2 = ei_runs[1].demographic_group_names
         candidate_names2 = ei_runs[1].candidate_names
 
-    common_groups = [g for g in demographic_group_names1 if g in demographic_group_names2]
+    common_groups = [
+        g for g in demographic_group_names1 if g in demographic_group_names2
+    ]
 
     group_dict = {}
     for group in common_groups:
@@ -510,15 +505,16 @@ def plot_precinct_scatterplot(ei_runs, run_names, candidate, demographic_group="
     ax.set_xlabel(f"Support for {candidate} (from {run_names[0]})", fontsize=FONTSIZE)
     ax.set_ylabel(f"Support for {candidate} (from {run_names[1]})", fontsize=FONTSIZE)
     ax.legend()
-    size_ticks(ax, "x")
-    size_ticks(ax, "y")
+    _size_ticks(ax, "x")
+    _size_ticks(ax, "y")
 
     return ax
 
 
-def plot_margin_kde(group, candidates, samples, thresholds, percentile, show_threshold, ax):
-    """
-    Plots a kde for the margin between two candidates among a given demographic group
+def plot_margin_kde(
+    group, candidates, samples, thresholds, percentile, show_threshold, ax
+):
+    """Plots a kde for the margin between two candidates among a given demographic group
 
     Parameters:
     -----------
@@ -533,7 +529,7 @@ def plot_margin_kde(group, candidates, samples, thresholds, percentile, show_thr
     show_threshold: bool
         if true, add vertical lines at the threshold on the plot
 
-    Returns
+    Returns:
     -------
     ax: Matplotlib axis object
     """
@@ -568,8 +564,12 @@ def plot_margin_kde(group, candidates, samples, thresholds, percentile, show_thr
             fontsize=FONTSIZE,
         )
 
-    ax.set_title(f"{candidates[0]} - {candidates[1]} margin among {group}", fontsize=TITLESIZE)
-    ax.set_xlabel(f"{group} support for {candidates[0]} - {candidates[1]}", fontsize=FONTSIZE)
+    ax.set_title(
+        f"{candidates[0]} - {candidates[1]} margin among {group}", fontsize=TITLESIZE
+    )
+    ax.set_xlabel(
+        f"{group} support for {candidates[0]} - {candidates[1]}", fontsize=FONTSIZE
+    )
     ax.set_xlim((-1, 1))
     xticks = ax.get_xticks()
     ax.set_xticks(xticks)
@@ -586,8 +586,7 @@ def plot_polarization_kde(
     ax=None,
     color="steelblue",
 ):
-    """
-    Plots a kde for the differences in voting preferences between two groups
+    """Plots a kde for the differences in voting preferences between two groups
 
     Parameters:
     -----------
@@ -607,11 +606,10 @@ def plot_polarization_kde(
     color: str
         specifies a color for matplotlib to be used in the histogram/kde
 
-    Returns
+    Returns:
     -------
     ax: Matplotlib axis object
     """
-
     if ax is None:
         _, ax = plt.subplots(figsize=FIGSIZE)
 
@@ -645,7 +643,9 @@ def plot_polarization_kde(
         )
 
     ax.set_title(f"Polarization KDE for {candidate_name}", fontsize=TITLESIZE)
-    ax.set_xlabel(f"({groups[0]} - {groups[1]}) support for {candidate_name}", fontsize=FONTSIZE)
+    ax.set_xlabel(
+        f"({groups[0]} - {groups[1]}) support for {candidate_name}", fontsize=FONTSIZE
+    )
     ax.set_xlim((-1, 1))
     xticks = ax.get_xticks()
     ax.set_xticks(xticks)
@@ -654,9 +654,10 @@ def plot_polarization_kde(
     return ax
 
 
-def plot_kdes(sampled_voting_prefs, group_names, candidate_names, plot_by="candidate", axes=None):
-    """
-    Plot a kernel density plot for prefs of voting groups for each candidate
+def plot_kdes(
+    sampled_voting_prefs, group_names, candidate_names, plot_by="candidate", axes=None
+):
+    """Plot a kernel density plot for prefs of voting groups for each candidate
 
     Parameters
     ----------
@@ -680,11 +681,10 @@ def plot_kdes(sampled_voting_prefs, group_names, candidate_names, plot_by="candi
         If not None and plot_by is 'candidate', should have length c (number of candidates).
         If plot_by is 'group', should have length r (number of groups)
 
-    Returns
+    Returns:
     -------
     ax : Matplotlib axis object
     """
-
     _, num_groups, num_candidates = sampled_voting_prefs.shape
     if plot_by == "candidate":
         num_plots = num_candidates
@@ -706,7 +706,9 @@ def plot_kdes(sampled_voting_prefs, group_names, candidate_names, plot_by="candi
             _, axes = plt.subplots(num_groups, figsize=FIGSIZE, sharex=True)
             plt.subplots_adjust(hspace=0.5)
     else:
-        raise ValueError("plot_by must be 'group' or 'candidate' (default: 'candidate')")
+        raise ValueError(
+            "plot_by must be 'group' or 'candidate' (default: 'candidate')"
+        )
 
     middle_plot = int(np.floor(num_plots / 2))
     for plot_idx in range(num_plots):
@@ -718,7 +720,7 @@ def plot_kdes(sampled_voting_prefs, group_names, candidate_names, plot_by="candi
             axes.set_ylabel("Probability Density", fontsize=FONTSIZE)
         ax.set_title(f"Support {support} " + titles[plot_idx], fontsize=TITLESIZE)
         ax.set_xlim((0, 1))
-        size_ticks(ax, "x")
+        _size_ticks(ax, "x")
 
         for kde_idx in range(num_kdes_per_plot):
             sns.histplot(
@@ -734,15 +736,18 @@ def plot_kdes(sampled_voting_prefs, group_names, candidate_names, plot_by="candi
             ax.set_ylabel("")
 
     if num_plots > 1:
-        axes[middle_plot].legend(bbox_to_anchor=(1, 1), loc="upper left", prop={"size": 12})
+        axes[middle_plot].legend(
+            bbox_to_anchor=(1, 1), loc="upper left", prop={"size": 12}
+        )
     else:
         ax.legend(prop={"size": 12})
     return axes
 
 
-def plot_conf_or_credible_interval(intervals, group_names, candidate_name, title, ax=None):
-    """
-    Plot confidence of credible interval for two different groups
+def plot_conf_or_credible_interval(
+    intervals, group_names, candidate_name, title, ax=None
+):
+    """Plot confidence of credible interval for two different groups
 
     Parameters
     ----------
@@ -760,11 +765,10 @@ def plot_conf_or_credible_interval(intervals, group_names, candidate_name, title
     ax : Matplotlib axis object or None, optional
         Default=None
 
-    Returns
+    Returns:
     -------
     ax : Matplotlib axis object
     """
-
     if ax is None:
         _, ax = plt.subplots(figsize=FIGSIZE)
 
@@ -790,7 +794,7 @@ def plot_conf_or_credible_interval(intervals, group_names, candidate_name, title
             alpha=0.8,
             color=colors[idx],
         )
-    size_ticks(ax, "x")
+    _size_ticks(ax, "x")
 
     return ax
 
@@ -804,8 +808,7 @@ def plot_intervals_all_precincts(
     ax=None,
     show_all_precincts=False,
 ):
-    """
-    Plot intervals&point estimates of support for candidate, sorted by point estimates for precincts
+    """Plot intervals&point estimates of support for candidate, sorted by point estimates for precincts
 
     Parameters
     ----------
@@ -826,7 +829,7 @@ def plot_intervals_all_precincts(
         (default=False). If True, show estimates&intervals for all precincts. If False,
         show only the first 50, for readibility.
 
-    Returns
+    Returns:
     -------
     ax : Matplotlib axis object
     """
@@ -919,11 +922,10 @@ def tomography_plot(
     **plot_kwargs
         Additional keyword arguments to be passed to matplotlib.Axes.plot()
 
-    Returns
+    Returns:
     -------
     ax : Matplotlib axis object
     """
-
     if ax is None:
         _, ax = plt.subplots()
 

@@ -1,17 +1,14 @@
-"""
-Functions that return pymc models for RowByColumnEI
-"""
+"""Functions that return pymc models for RowByColumnEI"""
 
+import numpy as np
 import pymc as pm
 import pytensor.tensor as at
-import numpy as np
-
-__all__ = ["ei_multinom_dirichlet_modified", "ei_multinom_dirichlet"]
 
 
-def ei_multinom_dirichlet(group_fractions, votes_fractions, precinct_pops, lmbda1=4, lmbda2=2):
-    """
-    An implementation of the r x c dirichlet/multinomial EI model
+def ei_multinom_dirichlet(
+    group_fractions, votes_fractions, precinct_pops, lmbda1=4, lmbda2=2
+):
+    """An implementation of the r x c dirichlet/multinomial EI model
 
     Parameters:
     -----------
@@ -25,11 +22,10 @@ def ei_multinom_dirichlet(group_fractions, votes_fractions, precinct_pops, lmbda
     lmbda1: float parameter passed to the Gamma(lmbda, 1/lmbda2) distribution
     lmbda2: float parameter passed to the Gamma(lmbda, 1/lmbda2) distribution
 
-    Returns
+    Returns:
     -------
     model: A pymc3 model
     """
-
     num_precincts = len(precinct_pops)  # number of precincts
     num_rows = group_fractions.shape[0]  # number of demographic groups (r)
     num_cols = votes_fractions.shape[0]  # number of candidates or voting outcomes (c)
@@ -50,7 +46,9 @@ def ei_multinom_dirichlet(group_fractions, votes_fractions, precinct_pops, lmbda
         conc_params = pm.Gamma(
             "conc_params", alpha=lmbda1, beta=1 / lmbda2, shape=(num_rows, num_cols)
         )  # chosen to match eiPack
-        beta = pm.Dirichlet("b", a=conc_params, shape=(num_precincts, num_rows, num_cols))
+        beta = pm.Dirichlet(
+            "b", a=conc_params, shape=(num_precincts, num_rows, num_cols)
+        )
         # num_precincts x r x c
         theta = (group_fractions_extended * beta).sum(axis=1)
         pm.Multinomial(
@@ -66,8 +64,7 @@ def ei_multinom_dirichlet(group_fractions, votes_fractions, precinct_pops, lmbda
 def ei_multinom_dirichlet_modified(
     group_fractions, votes_fractions, precinct_pops, pareto_scale=5, pareto_shape=1
 ):
-    """
-    An implementation of the r x c dirichlet/multinomial EI model with reparametrized hyperpriors
+    """An implementation of the r x c dirichlet/multinomial EI model with reparametrized hyperpriors
 
     Parameters:
     -----------
@@ -79,16 +76,15 @@ def ei_multinom_dirichlet_modified(
     precinct_pops: Length-num_precincts vector giving size of each precinct population of interest
         (e.g. voting population) (sometimes denoted N)
 
-    Returns
+    Returns:
     -------
     model: A pymc3 model
 
-    Notes
+    Notes:
     -----
     Reparametrizing of the hyperpriors to give (hopefully) better geometry for sampling.
     Also gives intuitive interpretation of hyperparams as mean and counts
     """
-
     num_precincts = len(precinct_pops)  # number of precincts
     num_rows = group_fractions.shape[0]  # number of demographic groups (r)
     num_cols = votes_fractions.shape[0]  # number of candidates or voting outcomes (c)
@@ -104,9 +100,15 @@ def ei_multinom_dirichlet_modified(
 
     with pm.Model() as model:
         # TODO: make b vs. beta naming consistent
-        kappa = pm.Pareto("kappa", alpha=pareto_shape, m=pareto_scale, shape=num_rows)  # size r
-        phi = pm.Dirichlet("phi", a=np.ones(num_cols), shape=(num_rows, num_cols))  # r x c
-        phi_kappa = pm.Deterministic("phi_kappa", at.transpose(kappa * at.transpose(phi)))
+        kappa = pm.Pareto(
+            "kappa", alpha=pareto_shape, m=pareto_scale, shape=num_rows
+        )  # size r
+        phi = pm.Dirichlet(
+            "phi", a=np.ones(num_cols), shape=(num_rows, num_cols)
+        )  # r x c
+        phi_kappa = pm.Deterministic(
+            "phi_kappa", at.transpose(kappa * at.transpose(phi))
+        )
         beta = pm.Dirichlet("b", a=phi_kappa, shape=(num_precincts, num_rows, num_cols))
         # num_precincts x r x c
         theta = (group_fractions_extended * beta).sum(axis=1)  # sum across num_rows

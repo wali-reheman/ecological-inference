@@ -1,6 +1,5 @@
 # pylint: disable-all
-"""
-Port of R code for Noncentral Hypergeometric distribution
+"""Port of R code for Noncentral Hypergeometric distribution
 adapted from R code published in conjunction with:
 Liao, J.G. And Rosen, O. (2001) Fast and Stable Algorithms for Computing and
 Sampling from the Noncentral Hypergeometric Distribution.  The American
@@ -8,21 +7,21 @@ Statistician 55, 366-369.
 
 Used in Greiner-Quinn method Gibbs sampler
 """
+
 import math
+
 import numpy as np
 from numba import jit
 
 
 @jit
-def r_function(n1, n2, m1, psi, i):
-    """
-    The function r defined in Liao and Rosen 2001
-    """
+def _r_function(n1, n2, m1, psi, i):
+    """The function r defined in Liao and Rosen 2001"""
     return (n1 - i + 1) * (m1 - i + 1) / (i * (n2 - m1 + i)) * psi
 
 
 @jit
-def sample_low_to_high(lower, ran, pi, shift, uu):
+def _sample_low_to_high(lower, ran, pi, shift, uu):
     for i in range(lower, uu + 1):
         if ran <= pi[i + shift]:
             return i
@@ -30,7 +29,7 @@ def sample_low_to_high(lower, ran, pi, shift, uu):
 
 
 @jit
-def sample_high_to_low(upper, ran, pi, shift, ll):
+def _sample_high_to_low(upper, ran, pi, shift, ll):
     for i in range(upper, ll - 1, -1):
         if ran <= pi[i + shift]:
             return i
@@ -50,7 +49,6 @@ def non_central_hypergeometric_sample(n1, n2, m1, psi):
     this the nchg distribution governs with parameters n1, n2, pis, m1
     is the distribution for y1 | y1 + y2 = m1
     """
-
     ll = max(0, m1 - n2)
     uu = min(n1, m1)
 
@@ -68,11 +66,11 @@ def non_central_hypergeometric_sample(n1, n2, m1, psi):
     pi = np.ones(uu - ll + 1, dtype=np.float32)
 
     if mode < uu:
-        r = r_function(n1, n2, m1, psi, np.arange(mode + 1, uu + 1))
+        r = _r_function(n1, n2, m1, psi, np.arange(mode + 1, uu + 1))
         pi[(mode + 1 - ll) : (uu - ll + 1)] = np.cumprod(r)
 
     if mode > ll:
-        r = 1 / r_function(
+        r = 1 / _r_function(
             n1,
             n2,
             m1,
@@ -86,9 +84,9 @@ def non_central_hypergeometric_sample(n1, n2, m1, psi):
     pi = density
 
     if mode == ll:
-        return sample_low_to_high(ll, ran, pi, -ll, uu)
+        return _sample_low_to_high(ll, ran, pi, -ll, uu)
     if mode == uu:
-        return sample_high_to_low(uu, ran, pi, -ll, ll)
+        return _sample_high_to_low(uu, ran, pi, -ll, ll)
     if ran < pi[mode - ll]:
         return mode
     ran = ran - pi[mode - ll]
@@ -101,7 +99,7 @@ def non_central_hypergeometric_sample(n1, n2, m1, psi):
                 return upper
             ran = ran - pi[upper - ll]
             if upper == uu:
-                samp = sample_high_to_low(lower, ran, pi, -ll, ll)
+                samp = _sample_high_to_low(lower, ran, pi, -ll, ll)
                 return samp
             upper = upper + 1
 
@@ -110,6 +108,6 @@ def non_central_hypergeometric_sample(n1, n2, m1, psi):
                 return lower
             ran = ran - pi[lower - ll]
             if lower == ll:
-                samp = sample_low_to_high(upper, ran, pi, -ll, uu)
+                samp = _sample_low_to_high(upper, ran, pi, -ll, uu)
                 return samp
             lower = lower - 1

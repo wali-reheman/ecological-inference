@@ -1,5 +1,4 @@
-"""
-Models and fitting for rxc methods
+"""Models and fitting for rxc methods
 where r and c are greater than or
 equal to 2
 
@@ -9,31 +8,28 @@ TODO: Refactor to integrate with two_by_two
 """
 
 import warnings
-import pymc as pm
+
 import numpy as np
-from .plot_utils import (
+import pymc as pm
+
+from pyei.greiner_quinn_gibbs_sampling import pyei_greiner_quinn_sample
+from pyei.plot_utils import (
     plot_boxplots,
-    plot_kdes,
     plot_intervals_all_precincts,
-    plot_polarization_kde,
+    plot_kdes,
     plot_margin_kde,
+    plot_polarization_kde,
     plot_precincts,
 )
-from .r_by_c_models import ei_multinom_dirichlet, ei_multinom_dirichlet_modified
-from .r_by_c_utils import check_dimensions_of_input
-from .greiner_quinn_gibbs_sampling import pyei_greiner_quinn_sample
-
-__all__ = ["RowByColumnEI"]
+from pyei.r_by_c_models import ei_multinom_dirichlet, ei_multinom_dirichlet_modified
+from pyei.r_by_c_utils import check_dimensions_of_input
 
 
 class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
-    """
-    Fitting and plotting for RxC models, fit via sampling
-    """
+    """Fitting and plotting for RxC models, fit via sampling"""
 
     def __init__(self, model_name, **additional_model_params):
-        """
-        Parameters:
+        """Parameters:
         -----------
         model_name: str
             The name of the model to use. Currently supported: multinomial-dirichlet,
@@ -66,7 +62,9 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
         self.turnout_adjusted_sampled_voting_prefs = (
             None  # samps districtwide prefs,num_samples x r x c-1
         )
-        self.turnout_adjusted_candidate_names = None  # candidate names with no-vote column omitted
+        self.turnout_adjusted_candidate_names = (
+            None  # candidate names with no-vote column omitted
+        )
         self.turnout_adjusted_posterior_mean_voting_prefs = None
         self.turnout_adjusted_credible_interval_95_mean_voting_prefs = None
         self.turnout_samples = None
@@ -138,7 +136,9 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
 
         # give demographic groups, candidates 1-indexed numbers as names if names are not specified
         if demographic_group_names is None:
-            demographic_group_names = [str(i) for i in range(1, group_fractions.shape[0] + 1)]
+            demographic_group_names = [
+                str(i) for i in range(1, group_fractions.shape[0] + 1)
+            ]
         if candidate_names is None:
             candidate_names = [str(i) for i in range(1, votes_fractions.shape[0] + 1)]
         self.demographic_group_names = demographic_group_names
@@ -217,8 +217,7 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             self.calculate_summary()
 
     def _calculate_turnout_adjusted_samples(self, non_candidate_names):
-        """
-        For each sample, calculate the voting support of each group for each candidate
+        """For each sample, calculate the voting support of each group for each candidate
         *as a fraction of all those who voted* (instead of as a fraction of all those
         included in the precinct population. This fn is only applicable when one of the
         c voting outcomes is a no-vote or abstain column. In this case, the total number
@@ -230,21 +229,22 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             each a name of the column/ voting outcome that corresponds to not voting,
             if applicable. Each string in the list must be in candidate_names
 
-        Notes
+        Notes:
         -----
         Sets the values of:
             self.turnout_adjusted_candidate_names
             self.turnout_samples
             self.turnout_adjusted_samples
         """
-
         abstain_column_indices = []
         for non_candidate_name in non_candidate_names:
             if non_candidate_name not in self.candidate_names:
                 raise ValueError(
                     f"non_candidate_names must be in candidate_names: {self.candidate_names}"
                 )
-            abstain_column_indices.append(self.candidate_names.index(non_candidate_name))
+            abstain_column_indices.append(
+                self.candidate_names.index(non_candidate_name)
+            )
 
         non_adjusted_samples = np.transpose(
             self.sim_trace["posterior"]["b"].stack(all_draws=["chain", "draw"]).values,
@@ -267,13 +267,13 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             non_adjusted_samples, abstain_column_indices, axis=3
         )  # num_samples x num_precincts x r x c-1
 
-        self.turnout_adjusted_samples = turnout_adjusted_samples / turnout_adjusted_samples.sum(
-            axis=3, keepdims=True
+        self.turnout_adjusted_samples = (
+            turnout_adjusted_samples
+            / turnout_adjusted_samples.sum(axis=3, keepdims=True)
         )  # num_samples x num_precincts x r x c-1
 
     def calculate_turnout_adjusted_summary(self, non_candidate_names):
-        """
-        Calculates districtwide samples, means, and credible intervals
+        """Calculates districtwide samples, means, and credible intervals
 
         Parameters
         ----------
@@ -281,7 +281,7 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             each a name of the column/ voting outcome that corresponds to not voting,
             if applicable. Each string in the list must be in candidate_names
 
-        Notes
+        Notes:
         -----
         Sets turnout_adjusted_voting_prefs, turnout_adjusted_posterior_mean_voting_prefs,
             turnout_adjusted_credible_interval_95_mean_voting_prefs
@@ -289,7 +289,8 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
         self._calculate_turnout_adjusted_samples(non_candidate_names)
 
         samples_converted_to_pops = (
-            np.transpose(self.turnout_adjusted_samples, axes=(3, 0, 1, 2)) * self.turnout_samples
+            np.transpose(self.turnout_adjusted_samples, axes=(3, 0, 1, 2))
+            * self.turnout_samples
         )
         # (c-1) x num_samples x num_precincts x r x
         samples_of_votes_summed_across_district = samples_converted_to_pops.sum(
@@ -318,10 +319,10 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
         )
         for row in range(self.num_groups_and_num_candidates[0]):
             for col in range(self.num_groups_and_num_candidates[1] - 1):
-                self.turnout_adjusted_credible_interval_95_mean_voting_prefs[row][col][:] = (
-                    np.percentile(
-                        self.turnout_adjusted_sampled_voting_prefs[:, row, col], percentiles
-                    )
+                self.turnout_adjusted_credible_interval_95_mean_voting_prefs[row][col][
+                    :
+                ] = np.percentile(
+                    self.turnout_adjusted_sampled_voting_prefs[:, row, col], percentiles
                 )
 
     def calculate_summary(self):
@@ -356,12 +357,15 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
 
         # obtain samples of the districtwide proportion of each demog. group voting for candidate
         self.sampled_voting_prefs = np.transpose(
-            samples_of_votes_summed_across_district / demographic_group_counts.sum(axis=0),
+            samples_of_votes_summed_across_district
+            / demographic_group_counts.sum(axis=0),
             axes=(1, 2, 0),
         )  # sampled voted prefs across precincts,  num_samples x r x c
 
         # # compute point estimates
-        self.posterior_mean_voting_prefs = self.sampled_voting_prefs.mean(axis=0)  # r x c
+        self.posterior_mean_voting_prefs = self.sampled_voting_prefs.mean(
+            axis=0
+        )  # r x c
 
         # compute credible intervals
         percentiles = [2.5, 97.5]
@@ -374,13 +378,12 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
         )
         for row in range(self.num_groups_and_num_candidates[0]):
             for col in range(self.num_groups_and_num_candidates[1]):
-                self.credible_interval_95_mean_voting_prefs[row][col][:] = np.percentile(
-                    self.sampled_voting_prefs[:, row, col], percentiles
+                self.credible_interval_95_mean_voting_prefs[row][col][:] = (
+                    np.percentile(self.sampled_voting_prefs[:, row, col], percentiles)
                 )
 
     def _calculate_margin(self, group, candidates, threshold=None, percentile=None):
-        """
-        Calculating the Candidate 1 - Candidate 2 margin among the given group.
+        """Calculating the Candidate 1 - Candidate 2 margin among the given group.
         Calculate the percentile given a threshold, or vice versa. Exactly one of
         {percentile, threshold} must be None.
 
@@ -416,7 +419,9 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
         )
 
         if percentile is None and threshold is not None:
-            percentile = 100 * (samples > threshold).sum() / len(self.sampled_voting_prefs)
+            percentile = (
+                100 * (samples > threshold).sum() / len(self.sampled_voting_prefs)
+            )
         elif threshold is None and percentile is not None:
             threshold = np.percentile(samples, 100 - percentile)
         else:
@@ -428,9 +433,10 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             )
         return threshold, percentile, samples, group, candidates
 
-    def margin_report(self, group, candidates, threshold=None, percentile=None, verbose=True):
-        """
-        For a given threshold, return the probability that the margin between
+    def margin_report(
+        self, group, candidates, threshold=None, percentile=None, verbose=True
+    ):
+        """For a given threshold, return the probability that the margin between
         the two candidates preferences in the given demographic group is greater than
         the threshold
         OR
@@ -497,9 +503,10 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
                 )
             return percentile
 
-    def _calculate_polarization(self, groups, candidate, threshold=None, percentile=None):
-        """
-        Calculate percentile given a threshold, or vice versa.
+    def _calculate_polarization(
+        self, groups, candidate, threshold=None, percentile=None
+    ):
+        """Calculate percentile given a threshold, or vice versa.
         Exactly one of {percentile, threshold} must be None.
         Parameters:
         -----------
@@ -517,7 +524,6 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             for the polarization. At least one of threshold and percentile
             must be None
         """
-
         candidate_index = self.candidate_names.index(candidate)
         group_index_0 = self.demographic_group_names.index(groups[0])
         group_index_1 = self.demographic_group_names.index(groups[1])
@@ -528,7 +534,9 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
         )
 
         if percentile is None and threshold is not None:
-            percentile = 100 * (samples > threshold).sum() / len(self.sampled_voting_prefs)
+            percentile = (
+                100 * (samples > threshold).sum() / len(self.sampled_voting_prefs)
+            )
         elif threshold is None and percentile is not None:
             threshold = np.percentile(samples, 100 - percentile)
         else:
@@ -540,9 +548,10 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             )
         return threshold, percentile, samples, groups, candidate
 
-    def polarization_report(self, groups, candidate, threshold=None, percentile=None, verbose=True):
-        """
-        For a given threshold, return the probability that the difference between
+    def polarization_report(
+        self, groups, candidate, threshold=None, percentile=None, verbose=True
+    ):
+        """For a given threshold, return the probability that the difference between
         the two demographic groups' preferences for the candidate is greater than
         the threshold
         OR
@@ -633,7 +642,9 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             self.calculate_turnout_adjusted_summary(non_candidate_names)
             candidate_names_for_summary = self.turnout_adjusted_candidate_names
             posterior_means = self.turnout_adjusted_posterior_mean_voting_prefs
-            credible_intervals = self.turnout_adjusted_credible_interval_95_mean_voting_prefs
+            credible_intervals = (
+                self.turnout_adjusted_credible_interval_95_mean_voting_prefs
+            )
         else:
             candidate_names_for_summary = self.candidate_names
             posterior_means = self.posterior_mean_voting_prefs
@@ -658,6 +669,7 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             Optional. If specified, this will give the names of column to be
             treated as no-vote columns, and the precinct-level estimates
             will be computed AMONG those who were estimated to have voted
+
         Returns:
         --------
             precinct_posterior_means: num_precincts x r x c
@@ -667,7 +679,9 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             precinct_level_samples = self.turnout_adjusted_samples
         else:
             precinct_level_samples = np.transpose(
-                self.sim_trace["posterior"]["b"].stack(all_draws=["chain", "draw"]).values,
+                self.sim_trace["posterior"]["b"]
+                .stack(all_draws=["chain", "draw"])
+                .values,
                 axes=(3, 0, 1, 2),
             )  # num_samples x num_precincts x r x c # num_samples x num_precincts x r x c
         _, _, r, c = precinct_level_samples.shape
@@ -712,13 +726,14 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
             Values are fraction of the samples in which the support of that group for that
             candidate was higher than for any other candidate
         """
-
         candidate_preference_rate_dict = {}
         if non_candidate_names is None:
             non_candidate_names = []
         non_cand_idxs = [self.candidate_names.index(n) for n in non_candidate_names]
         cand_names = [c for c in self.candidate_names if c not in non_candidate_names]
-        sampled_voting_prefs = np.delete(self.sampled_voting_prefs, non_cand_idxs, axis=2)
+        sampled_voting_prefs = np.delete(
+            self.sampled_voting_prefs, non_cand_idxs, axis=2
+        )
 
         for row in range(self.num_groups_and_num_candidates[0]):
             if verbose:
@@ -735,10 +750,14 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
                         f"{name} "
                         f"was higher than for any other candidate."
                     )
-                candidate_preference_rate_dict[(self.demographic_group_names[row], name)] = frac
+                candidate_preference_rate_dict[
+                    (self.demographic_group_names[row], name)
+                ] = frac
         return candidate_preference_rate_dict
 
-    def candidate_of_choice_polarization_report(self, verbose=True, non_candidate_names=None):
+    def candidate_of_choice_polarization_report(
+        self, verbose=True, non_candidate_names=None
+    ):
         """For each pair of groups, look at differences in preferences
         between those groups
 
@@ -768,12 +787,13 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
         by the plurality within that group according to the sampled distric-level support value)
         is different from the `preferred candidate` of the others group
         """
-
         candidate_differ_rate_dict = {}
         if non_candidate_names is None:
             non_candidate_names = []
         non_cand_idxs = [self.candidate_names.index(n) for n in non_candidate_names]
-        sampled_voting_prefs = np.delete(self.sampled_voting_prefs, non_cand_idxs, axis=2)
+        sampled_voting_prefs = np.delete(
+            self.sampled_voting_prefs, non_cand_idxs, axis=2
+        )
 
         for dem1 in range(self.num_groups_and_num_candidates[0]):
             for dem2 in range(dem1):
@@ -878,8 +898,7 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
         show_threshold=False,
         ax=None,
     ):
-        """
-        Plot kde of the margin between two candidates among the given demographic group.
+        """Plot kde of the margin between two candidates among the given demographic group.
 
         Parameters:
         ----------
@@ -959,16 +978,20 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
         if return_interval:
             lower_percentile = (100 - percentile) / 2
             upper_percentile = lower_percentile + percentile
-            lower_threshold, _, samples, groups, candidate = self._calculate_polarization(
-                groups, candidate, threshold, upper_percentile
+            lower_threshold, _, samples, groups, candidate = (
+                self._calculate_polarization(
+                    groups, candidate, threshold, upper_percentile
+                )
             )
-            upper_threshold, _, samples, groups, candidate = self._calculate_polarization(
-                groups, candidate, threshold, lower_percentile
+            upper_threshold, _, samples, groups, candidate = (
+                self._calculate_polarization(
+                    groups, candidate, threshold, lower_percentile
+                )
             )
             thresholds = [lower_threshold, upper_threshold]
         else:
-            threshold, percentile, samples, groups, candidate = self._calculate_polarization(
-                groups, candidate, threshold, percentile
+            threshold, percentile, samples, groups, candidate = (
+                self._calculate_polarization(groups, candidate, threshold, percentile)
             )
             thresholds = [threshold]
 
@@ -1032,8 +1055,7 @@ class RowByColumnEI:  # pylint: disable=too-many-instance-attributes
         precinct_names=None,
         plot_as_histograms=False,
     ):
-        """
-        Optional arguments:
+        """Optional arguments:
         candidate           : str
                                 The candidate whose support we're examining
         groups              : list of str

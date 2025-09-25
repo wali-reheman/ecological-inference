@@ -2,28 +2,30 @@
 
 # pylint: disable=duplicate-code
 import random
-import pytest
+
 import numpy as np
+import pytest
 import scipy.stats as st
 
-
 from pyei import data
-from pyei.r_by_c import RowByColumnEI
+from pyei.distribution_utils import non_central_hypergeometric_sample
 from pyei.greiner_quinn_gibbs_sampling import (
-    get_initial_internal_count_sample,
-    theta_to_omega,
+    _get_initial_internal_count_sample,
+    _theta_to_omega,
     greiner_quinn_gibbs_sample,
 )
-from pyei.distribution_utils import non_central_hypergeometric_sample
+from pyei.r_by_c import RowByColumnEI
 
 
 @pytest.fixture(scope="session")
 def example_r_by_c_data_asym():
-    """trimmed santa clara dataset with r not equal to c"""
+    """Trimmed santa clara dataset with r not equal to c"""
     sc_data = data.Datasets.Santa_Clara.to_dataframe()
     sc_data = sc_data.iloc[:10, :]
     precinct_pops = np.array(sc_data["total2"])
-    votes_fractions = np.array(sc_data[["pct_for_hardy2", "pct_for_kolstad2", "pct_for_nadeem2"]]).T
+    votes_fractions = np.array(
+        sc_data[["pct_for_hardy2", "pct_for_kolstad2", "pct_for_nadeem2"]]
+    ).T
     candidate_names = ["Hardy", "Kolstad", "Nadeem"]
     group_fractions = np.array(sc_data[["pct_asian_vote", "pct_non_asian_vote"]]).T
     demographic_group_names = ["asian", "non_asian"]
@@ -61,13 +63,23 @@ def test_get_initial_internal_count_sample(
     vote_counts = example_r_by_c_data_asym["vote_counts"]
     group_counts = example_r_by_c_data_asym["group_counts"]
     precinct_pops = example_r_by_c_data_asym["precinct_pops"]
-    samp = get_initial_internal_count_sample(group_counts, vote_counts, precinct_pops)
-    samp_py = get_initial_internal_count_sample.py_func(group_counts, vote_counts, precinct_pops)
+    samp = _get_initial_internal_count_sample(group_counts, vote_counts, precinct_pops)
+    samp_py = _get_initial_internal_count_sample.py_func(
+        group_counts, vote_counts, precinct_pops
+    )
 
-    assert np.all(samp.sum(axis=2) - group_counts == 0)  # sample respects given group counts
-    assert np.all(samp.sum(axis=1) - vote_counts == 0)  # sample respects given vote counts
-    assert np.all(samp_py.sum(axis=2) - group_counts == 0)  # sample respects given group counts
-    assert np.all(samp_py.sum(axis=1) - vote_counts == 0)  # sample respects given vote counts
+    assert np.all(
+        samp.sum(axis=2) - group_counts == 0
+    )  # sample respects given group counts
+    assert np.all(
+        samp.sum(axis=1) - vote_counts == 0
+    )  # sample respects given vote counts
+    assert np.all(
+        samp_py.sum(axis=2) - group_counts == 0
+    )  # sample respects given group counts
+    assert np.all(
+        samp_py.sum(axis=1) - vote_counts == 0
+    )  # sample respects given vote counts
 
 
 def test_theta_to_omega():
@@ -76,7 +88,7 @@ def test_theta_to_omega():
     c = 4
     alpha = np.ones(c)
     theta = st.dirichlet.rvs(alpha, size=(num_precincts, r))
-    omega = theta_to_omega(theta)
+    omega = _theta_to_omega(theta)
     assert omega.shape[2] == c - 1
     np.testing.assert_almost_equal(
         omega[3, 2, 1], np.log(theta[3, 2, 1] / theta[3, 2, c - 1]), decimal=4

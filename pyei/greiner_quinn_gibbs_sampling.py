@@ -1,5 +1,4 @@
-"""
-Functionality for Gibbs sampler to generate posterior samples
+"""Functionality for Gibbs sampler to generate posterior samples
 from model from James Greiner, D. and Quinn, K.M., 2009.
 R× C ecological inference: bounds, correlations, flexibility
 and transparency of assumptions. Journal of the Royal Statistical
@@ -7,14 +6,14 @@ Society: Series A (Statistics in Society), 172(1), pp.67-81.
 """
 
 import random
-import scipy.stats as st
-import numpy as np
-import arviz as az
-from tqdm import tqdm
-from numba import njit, prange
-from pyei.distribution_utils import non_central_hypergeometric_sample
 
-__all__ = ["pyei_greiner_quinn_sample", "greiner_quinn_gibbs_sample"]
+import arviz as az
+import numpy as np
+import scipy.stats as st
+from numba import njit, prange
+from tqdm import tqdm
+
+from pyei.distribution_utils import non_central_hypergeometric_sample
 
 
 def pyei_greiner_quinn_sample(  # pylint: disable=too-many-locals
@@ -29,8 +28,7 @@ def pyei_greiner_quinn_sample(  # pylint: disable=too-many-locals
     mu_0=None,
     gamma=0.1,
 ):
-    """
-    Converts pyei inputs to counts for gq, sets default hyperparams,
+    """Converts pyei inputs to counts for gq, sets default hyperparams,
     runs sampler, returns samples as an arviz InferenceData object
 
     Parameters:
@@ -113,7 +111,9 @@ def pyei_greiner_quinn_sample(  # pylint: disable=too-many-locals
             1 / 10 * np.identity(num_groups * (num_candidates - 1))
         )  # relates to prior precision
     if k_0_inv is None:
-        k_0_inv = 1 / (0.5) * np.identity(num_groups * (num_candidates - 1))  # same size as Sigma
+        k_0_inv = (
+            1 / (0.5) * np.identity(num_groups * (num_candidates - 1))
+        )  # same size as Sigma
     if mu_0 is None:
         votes_all_precincts = vote_counts.sum(axis=0)
         log_ratio_support = np.log(
@@ -134,18 +134,29 @@ def pyei_greiner_quinn_sample(  # pylint: disable=too-many-locals
     )
     # convert to InferenceData object
     for var_name in samples.keys():  # pylint: disable=consider-iterating-dictionary
-        samples[var_name] = np.expand_dims(samples[var_name], 0)  # add an axis for chain
-    samples["b"] = samples.pop("theta")  # changing variable name for vote prefernces to match pyei
+        samples[var_name] = np.expand_dims(
+            samples[var_name], 0
+        )  # add an axis for chain
+    samples["b"] = samples.pop(
+        "theta"
+    )  # changing variable name for vote prefernces to match pyei
     idata = az.from_dict(samples)
 
     return idata
 
 
 def greiner_quinn_gibbs_sample(  # pylint: disable=too-many-locals
-    group_counts, vote_counts, num_samples, nu_0, psi_0, k_0_inv, mu_0, gamma=0.1, burnin=0
+    group_counts,
+    vote_counts,
+    num_samples,
+    nu_0,
+    psi_0,
+    k_0_inv,
+    mu_0,
+    gamma=0.1,
+    burnin=0,
 ):
-    """
-    group_counts: ndarray
+    """group_counts: ndarray
         num_precincts x r gives number of people for each of r groups
         in num_precincts precincts
     vote_counts: ndarray
@@ -197,8 +208,8 @@ def greiner_quinn_gibbs_sample(  # pylint: disable=too-many-locals
     Sigma_samp = st.invwishart.rvs(df=nu_0, scale=psi_0)
     omega_samp = np.zeros((num_precincts, num_groups * (num_candidates - 1)))
     print(num_groups, num_candidates)
-    theta_samp = omega_to_theta(omega_samp, num_groups, num_candidates)
-    internal_cell_counts_samp = get_initial_internal_count_sample(
+    theta_samp = _omega_to_theta(omega_samp, num_groups, num_candidates)
+    internal_cell_counts_samp = _get_initial_internal_count_sample(
         group_counts, vote_counts, precinct_pops
     )
 
@@ -206,34 +217,49 @@ def greiner_quinn_gibbs_sample(  # pylint: disable=too-many-locals
     internal_cell_counts_samples = np.empty(
         (num_samples - burnin, num_precincts, num_groups, num_candidates)
     )
-    theta_samples = np.empty((num_samples - burnin, num_precincts, num_groups, num_candidates))
+    theta_samples = np.empty(
+        (num_samples - burnin, num_precincts, num_groups, num_candidates)
+    )
     mu_samples = np.empty((num_samples - burnin, num_groups * (num_candidates - 1)))
     sigma_samples = np.empty(
-        (num_samples - burnin, num_groups * (num_candidates - 1), num_groups * (num_candidates - 1))
+        (
+            num_samples - burnin,
+            num_groups * (num_candidates - 1),
+            num_groups * (num_candidates - 1),
+        )
     )
 
     for i in tqdm(range(num_samples)):
         # (a) sample internal cell counts
-        internal_cell_counts_samp = sample_internal_cell_counts(
+        internal_cell_counts_samp = _sample_internal_cell_counts(
             theta_samp, internal_cell_counts_samp
         )
 
         # (b) sample theta using Metropolis-Hastings
-        theta_samp = sample_theta(
-            internal_cell_counts_samp, theta_samp, omega_samp, mu_samp, Sigma_samp, gamma
+        theta_samp = _sample_theta(
+            internal_cell_counts_samp,
+            theta_samp,
+            omega_samp,
+            mu_samp,
+            Sigma_samp,
+            gamma,
         )
 
-        omega_samp = theta_to_omega(theta_samp)
+        omega_samp = _theta_to_omega(theta_samp)
         # TODO: IS THE NEXT LINE UNNECESSARY?
-        omega_samp = omega_samp.reshape((num_precincts, num_groups * (num_candidates - 1)))
+        omega_samp = omega_samp.reshape(
+            (num_precincts, num_groups * (num_candidates - 1))
+        )
 
         # (c) sample mu and sigma given omega (or, equivalently, given theta)
-        mu_samp = sample_mu(omega_samp, Sigma_samp, k_0_inv, mu_0, num_precincts)
-        Sigma_samp = sample_Sigma(omega_samp, mu_samp, nu_0, psi_0)
+        mu_samp = _sample_mu(omega_samp, Sigma_samp, k_0_inv, mu_0, num_precincts)
+        Sigma_samp = _sample_Sigma(omega_samp, mu_samp, nu_0, psi_0)
 
         # save samples after burn-in
         if i >= burnin:
-            internal_cell_counts_samples[i - burnin, :, :, :] = internal_cell_counts_samp
+            internal_cell_counts_samples[i - burnin, :, :, :] = (
+                internal_cell_counts_samp
+            )
             theta_samples[i - burnin, :, :, :] = theta_samp
             mu_samples[i - burnin, :] = mu_samp
             sigma_samples[i - burnin, :, :] = Sigma_samp
@@ -246,9 +272,8 @@ def greiner_quinn_gibbs_sample(  # pylint: disable=too-many-locals
     }
 
 
-def sample_Sigma(omega, mu, nu_0, psi_0):
-    """
-    Parameters:
+def _sample_Sigma(omega, mu, nu_0, psi_0):
+    """Parameters:
     -----------
     omega: ndarray
         num_precints x (r * (c - 1))
@@ -281,9 +306,8 @@ def sample_Sigma(omega, mu, nu_0, psi_0):
     return Sigma
 
 
-def sample_mu(omega, Sigma, k_0_inv, mu_0, num_precincts):
-    """
-    omega: num_precints x (r * (c - 1))
+def _sample_mu(omega, Sigma, k_0_inv, mu_0, num_precincts):
+    """omega: num_precints x (r * (c - 1))
     Sigma: ndarray
         square matrix r * (c - 1) x r * (c - 1), the covariance of omega
     k_0_inv is hyperparameter - square matrix r * (c - 1) x r * (c - 1)
@@ -303,7 +327,6 @@ def sample_mu(omega, Sigma, k_0_inv, mu_0, num_precincts):
     Returns:
     mu: a vector of length r * (c-1)
     """
-
     Sigma_inv = np.linalg.inv(Sigma)
     mean_omega = np.mean(omega, axis=0)
     mu_n = (np.linalg.inv(k_0_inv + num_precincts * Sigma_inv)) @ (
@@ -315,9 +338,10 @@ def sample_mu(omega, Sigma, k_0_inv, mu_0, num_precincts):
     return mu
 
 
-def proposal_dist_generate_sample(mu_samp, Sigma_samp, gamma, num_precincts, deg_freedom=4):
-    """
-    Grainer and Quinn use a t_4(mu_t, gamma * Sigma) proposal dist with gamma
+def _proposal_dist_generate_sample(
+    mu_samp, Sigma_samp, gamma, num_precincts, deg_freedom=4
+):
+    """Grainer and Quinn use a t_4(mu_t, gamma * Sigma) proposal dist with gamma
     set during inital runs - this generates an omega sample, which they transform
     back to theta space
 
@@ -331,8 +355,10 @@ def proposal_dist_generate_sample(mu_samp, Sigma_samp, gamma, num_precincts, deg
     return omega_proposed
 
 
-def log_unnormalized_pdf(theta, omega, internal_cell_counts_samp, mu_samp, Sigma_samp, tol=0.01):
-    """pdf proportional t to the product of lines (4)-(6) and (10) and (11) in G&Q
+def _log_unnormalized_pdf(
+    theta, omega, internal_cell_counts_samp, mu_samp, Sigma_samp, tol=0.01
+):
+    """Pdf proportional t to the product of lines (4)-(6) and (10) and (11) in G&Q
     0 if thetas don't sum to 1 across rows
 
     Sigma_samp: ndarray
@@ -342,9 +368,10 @@ def log_unnormalized_pdf(theta, omega, internal_cell_counts_samp, mu_samp, Sigma
     theta: ndarray
         num_precints x r x c
     """
-
     # Lines (10) - (11) are this check
-    if not np.all(abs(theta.sum(axis=2) - 1) < tol):  # CHECK IF THETAS SUM TO 1 across rows
+    if not np.all(
+        abs(theta.sum(axis=2) - 1) < tol
+    ):  # CHECK IF THETAS SUM TO 1 across rows
         return -np.inf  # if not, prob is zero, so log_prob is -inf
 
     else:
@@ -357,9 +384,8 @@ def log_unnormalized_pdf(theta, omega, internal_cell_counts_samp, mu_samp, Sigma
         return (line_4_and_6 + line_5).sum()  # sum over precincts
 
 
-def theta_to_omega(theta):
-    """
-    Parameters:
+def _theta_to_omega(theta):
+    """Parameters:
     -----------
     theta: ndarray
         num_precints x r x c
@@ -372,9 +398,10 @@ def theta_to_omega(theta):
     return np.log(theta[:, :, :-1]) - np.log(theta[:, :, [-1]])
 
 
-def sample_theta(internal_cell_counts_samp, theta_prev, omega_prev, mu_samp, Sigma_samp, gamma):
-    """
-    Use a Metropolis-Hastings step to sample theta
+def _sample_theta(
+    internal_cell_counts_samp, theta_prev, omega_prev, mu_samp, Sigma_samp, gamma
+):
+    """Use a Metropolis-Hastings step to sample theta
 
     internal_cell_counts_samp: ndarray
     theta_prev: ndarray
@@ -389,16 +416,16 @@ def sample_theta(internal_cell_counts_samp, theta_prev, omega_prev, mu_samp, Sig
     # MH
     num_precincts, r, c = internal_cell_counts_samp.shape
 
-    omega_proposed = proposal_dist_generate_sample(
+    omega_proposed = _proposal_dist_generate_sample(
         mu_samp, Sigma_samp, gamma, num_precincts, deg_freedom=4
     )
 
-    theta_proposed = omega_to_theta(omega_proposed, r, c)
+    theta_proposed = _omega_to_theta(omega_proposed, r, c)
 
-    log_unnormalized_pdf_proposed = log_unnormalized_pdf(
+    log_unnormalized_pdf_proposed = _log_unnormalized_pdf(
         theta_proposed, omega_proposed, internal_cell_counts_samp, mu_samp, Sigma_samp
     )
-    log_unnormalized_pdf_prev = log_unnormalized_pdf(
+    log_unnormalized_pdf_prev = _log_unnormalized_pdf(
         theta_prev, omega_prev, internal_cell_counts_samp, mu_samp, Sigma_samp
     )
 
@@ -414,9 +441,8 @@ def sample_theta(internal_cell_counts_samp, theta_prev, omega_prev, mu_samp, Sig
         return theta_prev
 
 
-def omega_to_theta(omega, r, c):
-    """
-    theta: num_precints x r x c
+def _omega_to_theta(omega, r, c):
+    """theta: num_precints x r x c
     omega: num_precincts x (r * (c-1))
 
     Note:
@@ -432,9 +458,8 @@ def omega_to_theta(omega, r, c):
 
 
 @njit(parallel=True)
-def sample_internal_cell_counts(theta_samp, prev_internal_counts_samp):
-    """
-    group_counts: num_precincts x r
+def _sample_internal_cell_counts(theta_samp, prev_internal_counts_samp):
+    """group_counts: num_precincts x r
     vote_counts: num_precincts x c
     theta: num_precints x r x c
     prev_internal_counts_samp: num_precincts x r x c
@@ -478,9 +503,8 @@ def sample_internal_cell_counts(theta_samp, prev_internal_counts_samp):
 
 
 @njit(parallel=True, nopython=False)
-def get_initial_internal_count_sample(group_counts, vote_counts, precinct_pops):
-    """
-    Sets an initial value of internal counts that is compatible with the
+def _get_initial_internal_count_sample(group_counts, vote_counts, precinct_pops):
+    """Sets an initial value of internal counts that is compatible with the
     observed vote and group counts
 
     Parameters:
@@ -515,7 +539,9 @@ def get_initial_internal_count_sample(group_counts, vote_counts, precinct_pops):
     """
     num_precincts, num_groups = group_counts.shape
     _, num_candidates = vote_counts.shape
-    internal_counts_samp = np.empty((num_precincts, num_groups, num_candidates), dtype=np.int16)
+    internal_counts_samp = np.empty(
+        (num_precincts, num_groups, num_candidates), dtype=np.int16
+    )
 
     group_counts_remaining = group_counts.copy()
     vote_counts_remaining = vote_counts.copy()
@@ -536,7 +562,9 @@ def get_initial_internal_count_sample(group_counts, vote_counts, precinct_pops):
                 group_counts_remaining[i, r] = group_counts_remaining[i, r] - samp
                 vote_counts_remaining[i, c] = vote_counts_remaining[i, c] - samp
                 internal_counts_samp[i, r, c] = samp
-            internal_counts_samp[i, r, num_candidates - 1] = group_counts_remaining[i, r]
+            internal_counts_samp[i, r, num_candidates - 1] = group_counts_remaining[
+                i, r
+            ]
             vote_counts_remaining[i, num_candidates - 1] = (
                 vote_counts_remaining[i, num_candidates - 1]
                 - internal_counts_samp[i, r, num_candidates - 1]
