@@ -1,18 +1,17 @@
 """Test two by two ecological inference."""
 
-import pytest
 import numpy as np
+import pytest
 import scipy.stats as st
 from scipy.special import logsumexp
 
-from pyei import two_by_two
-from pyei import data
+from pyei import data, two_by_two
 from pyei.two_by_two import TwoByTwoEI
 
 
 @pytest.fixture(scope="session")
 def example_two_by_two_data():
-    """load santa clara data to test two by two ei and plots"""  #
+    """Load santa clara data to test two by two ei and plots"""  #
     sc_data = data.Datasets.Santa_Clara.to_dataframe()
     group_fractions = np.array(sc_data["pct_e_asian_vote"])
     votes_fractions = np.array(sc_data["pct_for_hardy2"])  #
@@ -32,8 +31,10 @@ def example_two_by_two_data():
 
 @pytest.fixture(scope="session")
 def example_two_by_two_ei(example_two_by_two_data):  # pylint: disable=redefined-outer-name
-    """run example two by two ei method - can use to test plotting"""
-    ei_ex = TwoByTwoEI(model_name="king99_pareto_modification", pareto_scale=8, pareto_shape=2)
+    """Run example two by two ei method - can use to test plotting"""
+    ei_ex = TwoByTwoEI(
+        model_name="king99_pareto_modification", pareto_scale=8, pareto_shape=2
+    )
     ei_ex.fit(  #
         example_two_by_two_data["group_fractions"],
         example_two_by_two_data["votes_fractions"],
@@ -70,7 +71,9 @@ def generate_kwargs_for_log_binom_sum():
     return kwargs
 
 
-def log_binom_sum_in_scipy(lower, upper, obs_vote, n0_curr, n1_curr, b_1_curr, b_2_curr, prev):
+def log_binom_sum_in_scipy(
+    lower, upper, obs_vote, n0_curr, n1_curr, b_1_curr, b_2_curr, prev
+):
     """Reimplement theano logic in scipy to make sure it matches."""
     votes_withing_group_count = np.arange(lower, upper)
     return (
@@ -85,7 +88,9 @@ def log_binom_sum_in_scipy(lower, upper, obs_vote, n0_curr, n1_curr, b_1_curr, b
 def test_log_binom_sum():
     kwargs = generate_kwargs_for_log_binom_sum()
     np.testing.assert_almost_equal(
-        two_by_two.log_binom_sum(**kwargs).eval(), log_binom_sum_in_scipy(**kwargs), decimal=4
+        two_by_two._log_binom_sum(**kwargs).eval(),
+        log_binom_sum_in_scipy(**kwargs),
+        decimal=4,
     )
 
 
@@ -115,7 +120,9 @@ def test_binom_conv_log_p():
         )
     )
 
-    theano_result = two_by_two.binom_conv_log_p(b_1, b_2, n_0, n_1, upper, lower, obs_votes).eval()
+    theano_result = two_by_two._binom_conv_log_p(
+        b_1, b_2, n_0, n_1, upper, lower, obs_votes
+    ).eval()
 
     # Now compute the result using scipy
     prev = np.array([0])
@@ -134,4 +141,7 @@ def test_polarization_report(example_two_by_two_ei):  # pylint: disable=redefine
 
     assert prob_20 >= prob_40
     assert thresh_95_range[1] > thresh_95_range[0]
-    assert thresh_95_range[1] - thresh_95_range[0] >= thresh_90_range[1] - thresh_90_range[0]
+    assert (
+        thresh_95_range[1] - thresh_95_range[0]
+        >= thresh_90_range[1] - thresh_90_range[0]
+    )
