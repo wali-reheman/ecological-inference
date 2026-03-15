@@ -2,16 +2,16 @@
 
 [![DOI](https://joss.theoj.org/papers/10.21105/joss.03397/status.svg)](https://doi.org/10.21105/joss.03397)
 
-PyEI is a Python library for ecological inference. The target audience is the analyst with an interest in the phenomenon called Racially Polarized Voting.
+PyEI is a Python library for inferential techniques related to group voting behavior. The target audience is the analyst who seeks to identify and measure Racially Polarized Voting (RPV).
 
-Racially Polarized Voting is a legal concept developed through case law under the Voting Rights Act of 1965; its genesis is in the majority opinion of ***Thornburg v. Gingles (1982)***. Considered the “evidentiary linchpin” for vote dilution cases, RPV is a necessary, but not sufficient, condition that plaintiffs must satisfy for a valid claim. 
+Here, RPV refers specifically to the legal concept developed through case law around the Voting Rights Act of 1965, especially following the landmark Supreme Court case ***Thornburg v. Gingles*** (1982). Considered the “evidentiary linchpin” for vote dilution cases, demonstrating meaningful levels of polarization is a necessary, but not sufficient, condition that plaintiffs must satisfy to advance a VRA claim.
 
-Toward that end, ecological inference uses observed data (historical election results), pairing voting outcomes with demographic information
-for each precinct in a given polity, to infer voting patterns for each demographic group.
+Toward that end, inference methods use observed data (historical election results), pairing voting outcomes with demographic information
+for the precincts in a given jurisdiction, to infer voting patterns by demographic group.
 
-PyEI brings together a variety of ecological inference methods in one place and facilitates reporting and plotting results; quantifying the uncertainty associated with results under a given model; making comparisons between methods; and bringing relevant diagnostic tools to bear on ecological inference methods.
+PyEI brings together a variety of inference methods in one place and facilitates reporting and plotting results; quantifying the uncertainty associated with results under a given model; making comparisons between methods; and bringing relevant diagnostic tools to bear on ecological inference methods.
 
-PyEI is relatively new and under active development, so expect rough edges and bugs -- and for additional features and documentation to be coming quickly!
+PyEI is under active development, so expect rough edges -- bug reports and feature requests are welcome.
 
 ## Want to use PyEI? Start here.
 
@@ -94,7 +94,7 @@ This will also run automatically when you make a pull request, so if you have tr
 
 If you are using PyEI, please cite it as: 
 
-Knudson et al., (2021). PyEI: A Python package for ecological inference. Journal of Open Source Software, 6(64), 3397, https://doi.org/10.21105/joss.03397
+Knudson et al., (2021). PyEI: A Python package for ecological inference. Journal of Open Source Software, 6(64), 3397, [https://doi.org/10.21105/joss.03397](https://doi.org/10.21105/joss.03397)
 
 BibTeX:
 
