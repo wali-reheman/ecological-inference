@@ -194,22 +194,18 @@ class GoodmansERBayes(TwoByTwoEIBaseBayes):
 
     def __init__(
         self,
-        model_name="goodman_er_bayes",
         weighted_by_pop=False,
         **additional_model_params,
     ):
         """
         Optional arguments:
-        model_name: str
-            Default is "goodman_er_bayes"
         weighted_by_pop: bool
             Default is False. If true, weight precincts by population when
             performing the regression.
-        additional_model_parameters:
-            Any hyperparameters for model
+        additional_model_params: dict
+            Any hyperparameters for model (e.g. sigma).
         """
-        # TODO if no other model name is applicable here, remove need for model_name argument
-        super().__init__(model_name, **additional_model_params)
+        super().__init__("goodman_er_bayes", **additional_model_params)
         self.weighted_by_pop = weighted_by_pop
 
     def fit(
@@ -313,28 +309,34 @@ class GoodmansERBayes(TwoByTwoEIBaseBayes):
 
         return x_vals, means, lower_bounds, upper_bounds
 
-    def plot(self, scatter_kws=None, line_kws=None):
+    def plot(self, ax=None, scatter_kws=None, line_kws=None):
         """Plot regression line of votes_fraction vs. group_fraction, with scatter plot and
-        equal-tailed 95% credible interval for the line"
-        Parameters:
-        -----------
-        scatter_kws : dict (None)
-            Keyword arguments to be passed to matplotlib.Axes.scatter
-        line_kws : dict (None)
-            Keyword arguments to be passed to matplotlib.Axes.plot.
-            Note that the color of the ccredible interval shading is set to match
-            the color of the line itself (but the shading has higher alpha)
+        equal-tailed 95% credible interval for the line.
 
-        Notes:
-        ------
-        Examples of additional kwargs. Scatter_colors is list of colors of length num_precincts
-        scatter_kws={"c": scatter_colors, "color": None, "s": 20},
-        line_kws={"color":"black", "lw": 1}
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            Axes object to plot into. If None, a new figure is created.
+        scatter_kws : dict, optional
+            Keyword arguments passed to matplotlib.Axes.scatter.
+        line_kws : dict, optional
+            Keyword arguments passed to matplotlib.Axes.plot.
+            Note that the color of the credible interval shading is set to match
+            the color of the line itself (but the shading has higher alpha).
+
+        Returns
+        -------
+        ax : matplotlib.axes.Axes
+            The axes containing the plot.
+
+        Examples
+        --------
+        >>> ax = fig.add_subplot(111)
+        >>> goodman_er.plot(ax=ax, scatter_kws={'s': 20}, line_kws={'color': 'black'})
         """
-        # TODO: consider renaming these plots for goodman, to disambiguate with TwoByTwoEI.plot()
-        # TODO: accept axis argument
         x_vals, means, lower_bounds, upper_bounds = self.compute_credible_int_for_line()
-        _, ax = plt.subplots()
+        if ax is None:
+            _, ax = plt.subplots()
 
         if scatter_kws is None:
             scatter_kws = {}

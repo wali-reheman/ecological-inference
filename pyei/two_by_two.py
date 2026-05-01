@@ -836,7 +836,7 @@ class TwoByTwoEI(TwoByTwoEIBaseBayes):
                 # this "if" is a workaround until jax.scipy.special.erfcx is
                 # implemented https://github.com/google/jax/issues/1987
                 # (when that's implemented, trunc-normal can use jax sampling
-                # as well) @TODO: check on this in a little while
+                # as well)
                 if self.model_name in [
                     "truncated_normal"
                 ]:  # , "wakefield_normal", "wakefield_beta"]:
@@ -846,12 +846,33 @@ class TwoByTwoEI(TwoByTwoEIBaseBayes):
                         **other_sampling_args,
                     )
                 else:
-                    self.sim_trace = pm.sample(
-                        target_accept=target_accept,
-                        tune=tune,
-                        nuts_sampler="numpyro",
-                        **other_sampling_args,
-                    )
+                    try:
+                        self.sim_trace = pm.sample(
+                            target_accept=target_accept,
+                            tune=tune,
+                            nuts_sampler="numpyro",
+                            **other_sampling_args,
+                        )
+                    except Exception as e:  # pylint: disable=broad-except
+                        err_msg = str(e).lower()
+                        if (
+                            "nuts" in err_msg
+                            or "discrete" in err_msg
+                            or "non-differentiable" in err_msg
+                        ):
+                            raise type(e)(
+                                f"NUTS sampling failed for model '{self.model_name}': {e}\n\n"
+                                "Hint: This error typically occurs when the model posterior is "
+                                "non-differentiable (e.g. due to boundary constraints in king99 "
+                                " priors). Solutions:\n"
+                                "  1. Use model_name='truncated_normal' which uses an "
+                                "alternative sampler not affected by this issue.\n"
+                                "  2. If you need king99-style priors, consider the "
+                                "'king99_pareto_modification' variant as it can be more stable.\n"
+                                "  3. Report this at "
+                                "https://github.com/mggg/ecological-inference/issues/121"
+                            ) from e
+                        raise
 
             self.calculate_sampled_voting_prefs()
             super().calculate_summary()
@@ -924,10 +945,14 @@ class TwoByTwoEI(TwoByTwoEIBaseBayes):
 
         return (precinct_posterior_means, precinct_credible_intervals)
 
-    def plot_intervals_by_precinct(self):
-        """Plot of point estimates and credible intervals for each precinct"""
-        # TODO: Fix use of axes
+    def plot_intervals_by_precinct(self, ax=None):
+        """Plot of point estimates and credible intervals for each precinct.
 
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            Axes object to plot into. If None, a new figure is created.
+        """
         precinct_posterior_means, precinct_credible_intervals = self.precinct_level_estimates()
         precinct_posterior_means_gp1 = precinct_posterior_means[:, 0, 0]
         precinct_posterior_means_gp2 = precinct_posterior_means[:, 1, 0]
@@ -940,6 +965,7 @@ class TwoByTwoEI(TwoByTwoEIBaseBayes):
             self.candidate_name,
             self.precinct_names,
             self.group_names_for_display()[0],
+            ax=ax,
         )
         plot_gp2 = plot_intervals_all_precincts(
             precinct_posterior_means_gp2,
@@ -947,6 +973,7 @@ class TwoByTwoEI(TwoByTwoEIBaseBayes):
             self.candidate_name,
             self.precinct_names,
             self.group_names_for_display()[1],
+            ax=ax,
         )
 
         return plot_gp1, plot_gp2
